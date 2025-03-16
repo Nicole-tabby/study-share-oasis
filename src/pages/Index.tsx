@@ -3,6 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import NavigationBar from '@/components/NavigationBar';
+import Logo from '@/components/Logo';
 import { motion } from 'framer-motion';
 
 const Index = () => {
