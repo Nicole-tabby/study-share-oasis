@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import NavigationBar from '@/components/NavigationBar';
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, Download, FileText } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Eye } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
 
 interface Note {
   id: string;
@@ -20,6 +21,7 @@ interface Note {
   author: string;
   authorId: string;
   date: string;
+  views: number;
 }
 
 const ViewNote = () => {
@@ -45,6 +47,24 @@ const ViewNote = () => {
         const foundNote = allNotes.find((n: Note) => n.id === noteId);
         
         if (foundNote) {
+          // Add view counter if not present
+          if (!foundNote.views) {
+            foundNote.views = 0;
+          }
+          
+          // Increment view counter
+          foundNote.views += 1;
+          
+          // Update note in localStorage
+          const updatedNotes = allNotes.map((n: Note) => {
+            if (n.id === noteId) {
+              return { ...foundNote };
+            }
+            return n;
+          });
+          
+          localStorage.setItem('allNotes', JSON.stringify(updatedNotes));
+          
           setNote(foundNote);
         } else {
           toast({
@@ -167,8 +187,13 @@ const ViewNote = () => {
               <div className="h-12 w-12 bg-studyhub-100 text-studyhub-600 dark:bg-studyhub-900 dark:text-studyhub-300 rounded-full flex items-center justify-center">
                 <span className="text-lg font-medium">{note.author.charAt(0)}</span>
               </div>
-              <div>
-                <h2 className="text-xl font-semibold dark:text-white">{note.title}</h2>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold dark:text-white">{note.title}</h2>
+                  <Badge variant="outline" className="bg-studyhub-50 text-studyhub-700 border-studyhub-200 dark:bg-studyhub-900 dark:text-studyhub-300 dark:border-studyhub-800">
+                    <Eye className="mr-1 h-3 w-3" /> Public Note
+                  </Badge>
+                </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   Uploaded by {note.author} • {new Date(note.date).toLocaleDateString()}
                 </p>
@@ -199,9 +224,11 @@ const ViewNote = () => {
                   <FileText className="h-8 w-8 text-studyhub-500" />
                   <div>
                     <p className="font-medium dark:text-gray-200">{note.fileName}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {note.downloads} downloads
-                    </p>
+                    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-3">
+                      <span>{note.downloads} downloads</span>
+                      <span>•</span>
+                      <span>{note.views || 1} views</span>
+                    </div>
                   </div>
                 </div>
                 
