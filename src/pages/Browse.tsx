@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -224,6 +223,10 @@ const Browse = () => {
     localStorage.setItem('savedNotes', JSON.stringify(savedNotesList));
   };
   
+  const handleViewNote = (noteId: string) => {
+    navigate(`/note/${noteId}`);
+  };
+  
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <NavigationBar />
@@ -358,6 +361,7 @@ const Browse = () => {
                             variant="default" 
                             size="sm" 
                             className="text-xs px-3 py-1 h-8 bg-studyhub-500 hover:bg-studyhub-600 flex items-center gap-1"
+                            onClick={() => handleViewNote(note.id)}
                           >
                             <FileText className="h-3 w-3" />
                             View

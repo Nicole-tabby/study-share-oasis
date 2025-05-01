@@ -11,6 +11,7 @@ import Register from "./pages/Register";
 import Profile from "./pages/Profile";
 import Browse from "./pages/Browse";
 import Upload from "./pages/Upload";
+import ViewNote from "./pages/ViewNote";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/browse" element={<Browse />} />
             <Route path="/upload" element={<Upload />} />
+            <Route path="/note/:noteId" element={<ViewNote />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AnimatePresence>
