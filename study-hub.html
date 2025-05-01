@@ -7,9 +7,31 @@
   <title>Study Hub - Share Your Study Materials</title>
   <meta name="description" content="Study Hub transforms study material sharing for students worldwide. Upload, find, and organize your notes in one place.">
   <link rel="stylesheet" href="study-hub.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
   <div id="root"></div>
+  <div id="mobile-menu" class="mobile-menu">
+    <div class="mobile-menu-header">
+      <span class="logo">
+        <img src="/lovable-uploads/6adbb992-d70a-4069-9933-fa9085f43ad7.png" alt="Study Hub" class="logo-img">
+        Study Hub
+      </span>
+      <button id="close-mobile-menu" class="close-menu-btn">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="mobile-menu-content">
+      <a href="/browse" onclick="navigate('/browse'); return false;">Browse Notes</a>
+      <a href="/upload" onclick="navigate('/upload'); return false;">Upload Notes</a>
+      <a href="/profile" onclick="navigate('/profile'); return false;">My Profile</a>
+      <button onclick="toggleDarkMode()" class="theme-toggle">
+        <i id="theme-icon-mobile" class="fas fa-moon"></i>
+        <span id="theme-text-mobile">Dark Mode</span>
+      </button>
+      <button onclick="logout()" class="logout-btn">Logout</button>
+    </div>
+  </div>
   <script src="study-hub.js"></script>
 </body>
 </html>
