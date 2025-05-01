@@ -1,140 +1,133 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
+ 
 @layer base {
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
+
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
+ 
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 122 39% 30%;
+ 
+    --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 120 40% 96.1%;
+ 
+    --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
+ 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 120 40% 96.1%;
+ 
+    --accent: 210 40% 96.1%;
     --accent-foreground: 222.2 47.4% 11.2%;
+ 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
+
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 122 39% 45%;
+    --ring: 222.2 84% 4.9%;
+ 
     --radius: 0.5rem;
+
+    --studyhub-50: 240 100% 97%;
+    --studyhub-100: 240 100% 94%;
+    --studyhub-200: 240 98% 88%;
+    --studyhub-300: 240 94% 80%;
+    --studyhub-400: 240 90% 70%;
+    --studyhub-500: 240 84% 60%;
+    --studyhub-600: 240 70% 50%;
+    --studyhub-700: 240 76% 40%;
+    --studyhub-800: 240 80% 30%;
+    --studyhub-900: 240 82% 24%;
+    --studyhub-950: 240 84% 15%;
   }
  
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
+ 
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
+ 
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 122 39% 45%;
+ 
+    --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
+ 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
+ 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
+ 
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
+ 
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
+ 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 122 39% 45%;
+    --ring: 212.7 26.8% 83.9%;
   }
 }
-
+ 
 @layer base {
   * {
     @apply border-border;
   }
-  
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
-  
-  .smooth-transition {
-    @apply transition-all duration-300 ease-in-out;
-  }
-  
-  .backdrop-blur-card {
-    @apply bg-white bg-opacity-90 backdrop-blur-md border border-gray-200 shadow-sm;
-  }
-  
-  .glass-card {
-    @apply bg-white/50 backdrop-blur-md border border-white/30 shadow-sm;
-  }
-  
-  .hover-scale {
-    @apply transition-transform duration-300 hover:scale-105;
-  }
-  
-  .button-pulse {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-  
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.7;
-    }
-  }
-  
-  /* Logo Animation */
-  .logo-animation .triangle {
-    transform-origin: center;
-    transition: transform 0.5s ease-in-out, fill 0.5s ease-in-out;
-  }
-  
-  .logo-animation:hover .triangle-1 {
-    transform: translateY(-3px);
-    fill: theme('colors.studyhub.400');
-  }
-  
-  .logo-animation:hover .triangle-2 {
-    transform: translateX(-3px);
-    fill: theme('colors.studyhub.500');
-  }
-  
-  .logo-animation:hover .triangle-3 {
-    transform: translateX(3px);
-    fill: theme('colors.studyhub.500');
-  }
-  
-  .logo-animation:hover .triangle-4 {
-    transform: translateY(-5px);
-    fill: theme('colors.studyhub.300');
-  }
-  
-  /* Page transitions */
-  .page-enter {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  
-  .page-enter-active {
-    opacity: 1;
-    transform: translateY(0);
-    transition: opacity 400ms, transform 400ms;
-  }
-  
-  .page-exit {
-    opacity: 1;
-  }
-  
-  .page-exit-active {
-    opacity: 0;
-    transition: opacity 300ms;
-  }
+}
+
+.bg-studyhub-50 {
+  background-color: hsl(var(--studyhub-50));
+}
+
+.bg-studyhub-100 {
+  background-color: hsl(var(--studyhub-100));
+}
+
+.bg-studyhub-500 {
+  background-color: hsl(var(--studyhub-500));
+}
+
+.bg-studyhub-600 {
+  background-color: hsl(var(--studyhub-600));
+}
+
+.bg-studyhub-900 {
+  background-color: hsl(var(--studyhub-900));
+}
+
+.text-studyhub-300 {
+  color: hsl(var(--studyhub-300));
+}
+
+.text-studyhub-400 {
+  color: hsl(var(--studyhub-400));
+}
+
+.text-studyhub-500 {
+  color: hsl(var(--studyhub-500));
+}
+
+.text-studyhub-600 {
+  color: hsl(var(--studyhub-600));
+}
+
+.text-studyhub-700 {
+  color: hsl(var(--studyhub-700));
+}
+
+.hover\:bg-studyhub-600:hover {
+  background-color: hsl(var(--studyhub-600));
 }
