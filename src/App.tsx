@@ -3,9 +3,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useEffect } from "react";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -15,39 +16,56 @@ import Upload from "./pages/Upload";
 import ViewNote from "./pages/ViewNote";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Protected route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      // Redirect to login but save the attempted URL
+      navigate('/login', { state: { from: location.pathname }, replace: true });
+    }
+  }, [user, loading, navigate, location]);
 
   if (loading) {
     // You could return a loading spinner here
     return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
   }
 
-  if (!user) {
-    // Redirect to login but save the attempted URL
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  return <>{children}</>;
+  return user ? <>{children}</> : null;
 };
 
 // Public route that redirects if user is already logged in
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get the intended destination from location state or default to /browse
+  const from = location.state?.from || '/browse';
+  
+  useEffect(() => {
+    if (!loading && user) {
+      navigate(from, { replace: true });
+    }
+  }, [user, loading, navigate, from]);
   
   if (loading) {
     return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
   }
   
-  if (user) {
-    return <Navigate to="/browse" replace />;
-  }
-  
-  return <>{children}</>;
+  return !user ? <>{children}</> : null;
 };
 
 const AppRoutes = () => {

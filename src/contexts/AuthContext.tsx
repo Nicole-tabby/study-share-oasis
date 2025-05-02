@@ -82,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -109,11 +110,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
       return { error };
+    } finally {
+      // Loading will be set to false after profile is fetched in onAuthStateChange
     }
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
     try {
+      setLoading(true);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -146,11 +150,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "destructive",
       });
       return { error, data: null };
+    } finally {
+      // Loading will be set to false after profile is fetched in onAuthStateChange
     }
   };
 
   const signOut = async () => {
     try {
+      setLoading(true);
       await supabase.auth.signOut();
       toast({
         title: "Signed out successfully",
@@ -161,6 +168,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 

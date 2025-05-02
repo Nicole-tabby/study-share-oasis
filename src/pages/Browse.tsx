@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { motion } from 'framer-motion';
 import { useToast } from "@/components/ui/use-toast";
 import { Search, Filter, Bookmark, BookmarkCheck, ArrowUp, ArrowDown, Clock, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Note {
   id: string;
@@ -33,27 +35,31 @@ const Browse = () => {
   const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [savedNotes, setSavedNotes] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
-  // Check authentication status on mount
+  // Check authentication and load notes
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
-    // Load saved notes IDs
-    const savedIds = localStorage.getItem('savedNotesIds');
-    if (savedIds) {
-      try {
-        setSavedNotes(JSON.parse(savedIds));
-      } catch (error) {
-        console.error("Error parsing saved note IDs:", error);
+    if (user) {
+      loadNotes();
+      
+      // Load saved notes IDs
+      const savedIds = localStorage.getItem('savedNotesIds');
+      if (savedIds) {
+        try {
+          setSavedNotes(JSON.parse(savedIds));
+        } catch (error) {
+          console.error("Error parsing saved note IDs:", error);
+        }
       }
     }
+  }, [user]);
+  
+  const loadNotes = () => {
+    setIsLoading(true);
     
     // Load notes from localStorage or use sample data if none exists
     const storedNotes = localStorage.getItem('allNotes');
@@ -69,7 +75,9 @@ const Browse = () => {
     } else {
       generateSampleNotes();
     }
-  }, [navigate]);
+    
+    setIsLoading(false);
+  };
   
   const generateSampleNotes = () => {
     const sampleNotes: Note[] = [
@@ -226,6 +234,20 @@ const Browse = () => {
   const handleViewNote = (noteId: string) => {
     navigate(`/note/${noteId}`);
   };
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+        <NavigationBar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-studyhub-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500 dark:text-gray-400">Loading notes...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">

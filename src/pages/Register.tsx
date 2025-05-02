@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,21 +15,13 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const { signUp, user } = useAuth();
+  const { signUp, loading } = useAuth();
   
   // Get the intended destination from location state or default to /browse
-  const from = location.state?.from?.pathname || '/browse';
-  
-  useEffect(() => {
-    // If user is already logged in, redirect to intended destination
-    if (user) {
-      navigate(from, { replace: true });
-    }
-  }, [user, navigate, from]);
+  const from = location.state?.from || '/browse';
   
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,15 +42,12 @@ const Register = () => {
       return;
     }
     
-    setLoading(true);
-    
     const { error } = await signUp(email, password, fullName);
     
     if (!error) {
-      // Navigation will happen automatically in the useEffect when user state updates
+      // Navigation will happen automatically in the PublicRoute component
+      console.log("Registration successful, redirecting to:", from);
     }
-    
-    setLoading(false);
   };
   
   return (
@@ -114,6 +103,7 @@ const Register = () => {
                   placeholder="John Smith"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  disabled={loading}
                   required
                 />
               </div>
@@ -126,6 +116,7 @@ const Register = () => {
                   placeholder="johnsmith@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
                   required
                 />
               </div>
@@ -139,12 +130,14 @@ const Register = () => {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
                     required
                   />
                   <button 
                     type="button"
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -159,6 +152,7 @@ const Register = () => {
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading}
                   required
                 />
               </div>
