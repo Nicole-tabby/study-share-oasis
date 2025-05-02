@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,14 +16,18 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const { signIn, user } = useAuth();
   
+  // Get the intended destination from location state or default to /browse
+  const from = location.state?.from?.pathname || '/browse';
+  
   useEffect(() => {
-    // If user is already logged in, redirect to browse page
+    // If user is already logged in, redirect to intended destination
     if (user) {
-      navigate('/browse');
+      navigate(from, { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, from]);
   
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +45,7 @@ const Login = () => {
     const { error } = await signIn(email, password);
     
     if (!error) {
-      navigate('/browse');
+      // Navigation will happen automatically in the useEffect when user state updates
     }
     
     setLoading(false);

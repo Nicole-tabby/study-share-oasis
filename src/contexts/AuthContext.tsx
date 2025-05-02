@@ -24,32 +24,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user || null);
-      
-      if (session?.user) {
-        fetchProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
-
-    // Listen for auth changes
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-        setUser(session?.user || null);
+      (_event, currentSession) => {
+        // Only update synchronous state here to prevent deadlocks
+        setSession(currentSession);
+        setUser(currentSession?.user || null);
         
-        if (session?.user) {
-          fetchProfile(session.user.id);
+        if (currentSession?.user) {
+          // Use setTimeout to defer Supabase calls
+          setTimeout(() => {
+            fetchProfile(currentSession.user.id);
+          }, 0);
         } else {
           setProfile(null);
           setLoading(false);
         }
       }
     );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user || null);
+      
+      if (currentSession?.user) {
+        fetchProfile(currentSession.user.id);
+      } else {
+        setLoading(false);
+      }
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -62,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching profile:', error);
