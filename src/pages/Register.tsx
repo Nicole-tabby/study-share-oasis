@@ -1,13 +1,13 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import Logo from '@/components/NavigationBar';
 import { motion } from 'framer-motion';
 import { useToast } from "@/components/ui/use-toast";
 import { Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Register = () => {
   const [fullName, setFullName] = useState('');
@@ -18,8 +18,16 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signUp, user } = useAuth();
   
-  const handleRegister = (e: React.FormEvent) => {
+  useEffect(() => {
+    // If user is already logged in, redirect to browse page
+    if (user) {
+      navigate('/browse');
+    }
+  }, [user, navigate]);
+  
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!fullName || !email || !password || !confirmPassword) {
@@ -40,20 +48,15 @@ const Register = () => {
     
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      // Store in localStorage for demo purposes
-      localStorage.setItem('user', JSON.stringify({ fullName, email }));
-      localStorage.setItem('isAuthenticated', 'true');
-      
-      toast({
-        title: "Account created successfully",
-        description: "Welcome to Study Hub!",
-      });
-      
+    const { error } = await signUp(email, password, fullName);
+    
+    if (!error) {
+      // In production, there might be email verification required
+      // For now, user will be signed in automatically
       navigate('/browse');
-      setLoading(false);
-    }, 1500);
+    }
+    
+    setLoading(false);
   };
   
   return (
@@ -98,7 +101,7 @@ const Register = () => {
           >
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold mb-2">Sign up</h1>
-              <p className="text-gray-600">Join us today on CampusConnect!</p>
+              <p className="text-gray-600">Join us today on Study Hub!</p>
             </div>
             
             <form onSubmit={handleRegister} className="space-y-6">

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { motion } from 'framer-motion';
 import { useToast } from "@/components/ui/use-toast";
 import { Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -15,8 +16,16 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { signIn, user } = useAuth();
   
-  const handleLogin = (e: React.FormEvent) => {
+  useEffect(() => {
+    // If user is already logged in, redirect to browse page
+    if (user) {
+      navigate('/browse');
+    }
+  }, [user, navigate]);
+  
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
@@ -29,23 +38,13 @@ const Login = () => {
     
     setLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      // For demo purposes, just set as authenticated
-      localStorage.setItem('isAuthenticated', 'true');
-      localStorage.setItem('user', JSON.stringify({ 
-        fullName: 'Demo User', 
-        email: email 
-      }));
-      
-      toast({
-        title: "Logged in successfully",
-        description: "Welcome back to Study Hub!",
-      });
-      
+    const { error } = await signIn(email, password);
+    
+    if (!error) {
       navigate('/browse');
-      setLoading(false);
-    }, 1500);
+    }
+    
+    setLoading(false);
   };
   
   return (
