@@ -86,36 +86,51 @@ export const useNotes = () => {
       queryFn: async () => {
         if (!noteId) throw new Error('Note ID is required');
         
-        // Fix the join query - use the correct format for joining tables
-        const { data, error } = await supabase
+        // Get the note first
+        const { data: noteData, error: noteError } = await supabase
           .from('notes')
-          .select(`
-            *,
-            profiles(full_name, avatar_url)
-          `)
+          .select('*')
           .eq('id', noteId)
           .maybeSingle();
 
-        if (error) {
+        if (noteError) {
           toast({
             title: 'Error fetching note',
-            description: error.message,
+            description: noteError.message,
             variant: 'destructive',
           });
-          throw error;
+          throw noteError;
         }
 
-        if (!data) {
+        if (!noteData) {
           throw new Error('Note not found');
         }
+        
+        // Then get the profile data for the note's user_id
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('id', noteData.user_id)
+          .maybeSingle();
+        
+        if (profileError) {
+          // Just log profile error but don't fail the whole request
+          console.error('Error fetching profile data:', profileError);
+        }
+
+        // Combine note and profile data
+        const noteWithProfile = {
+          ...noteData,
+          profiles: profileData || null
+        };
 
         // Increment view counter
         await supabase
           .from('notes')
-          .update({ views: (data.views || 0) + 1 })
+          .update({ views: (noteData.views || 0) + 1 })
           .eq('id', noteId);
 
-        return data;
+        return noteWithProfile;
       },
       enabled: !!noteId,
     });
