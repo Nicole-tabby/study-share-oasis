@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,21 +32,54 @@ export const useNotes = () => {
     return useQuery({
       queryKey: ['publicNotes'],
       queryFn: async () => {
-        const { data, error } = await supabase
+        // First, fetch all public notes
+        const { data: notesData, error: notesError } = await supabase
           .from('notes')
-          .select('*, profiles(full_name, avatar_url)')
+          .select('*')
           .eq('public', true)
           .order('created_at', { ascending: false });
 
-        if (error) {
+        if (notesError) {
           toast({
             title: 'Error fetching notes',
-            description: error.message,
+            description: notesError.message,
             variant: 'destructive',
           });
-          throw error;
+          throw notesError;
         }
-        return data || [];
+
+        // If we have notes, fetch their corresponding profile data
+        if (notesData && notesData.length > 0) {
+          // Get unique user IDs from notes
+          const userIds = [...new Set(notesData.map(note => note.user_id))];
+          
+          // Fetch all relevant profiles in one query
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name, avatar_url')
+            .in('id', userIds);
+            
+          if (profilesError) {
+            console.error('Error fetching profiles:', profilesError);
+            // Continue without profiles rather than failing completely
+          }
+          
+          // Create a map of user_id to profile data for quick lookups
+          const profilesMap = (profilesData || []).reduce((map, profile) => {
+            map[profile.id] = profile;
+            return map;
+          }, {});
+          
+          // Join notes with their profile data
+          const notesWithProfiles = notesData.map(note => ({
+            ...note,
+            profiles: profilesMap[note.user_id] || null
+          }));
+          
+          return notesWithProfiles;
+        }
+        
+        return notesData || [];
       },
     });
   };
