@@ -20,7 +20,7 @@ export const useSavedNotes = () => {
         if (!userId) return [];
         
         // First, get the saved notes references
-        // Need to use @ts-ignore because the saved_notes table is not in the auto-generated types
+        // We need to use @ts-ignore because the saved_notes table is not in the auto-generated types
         // @ts-ignore
         const { data: savedNoteRefs, error: savedNotesError } = await supabase
           .from('saved_notes')
@@ -42,8 +42,7 @@ export const useSavedNotes = () => {
         }
         
         // Extract note IDs
-        // @ts-ignore - Type safety for SavedNote
-        const noteIds = savedNoteRefs.map((ref) => ref.note_id);
+        const noteIds = savedNoteRefs.map((ref: any) => ref.note_id);
         
         // Fetch the actual notes
         const { data: notesData, error: notesError } = await supabase
@@ -89,8 +88,7 @@ export const useSavedNotes = () => {
           }));
           
           // Combine saved note references with note data
-          // @ts-ignore - Type safety for SavedNote
-          const result = savedNoteRefs.map((savedRef) => {
+          const result = savedNoteRefs.map((savedRef: any) => {
             const noteData = notesWithProfiles.find(note => note.id === savedRef.note_id);
             return {
               ...savedRef,
@@ -101,8 +99,8 @@ export const useSavedNotes = () => {
           return result;
         }
         
-        // @ts-ignore - Type safety for SavedNote
-        return savedNoteRefs.map((ref) => ({ ...ref, note: null }));
+        // If no note data, just return saved refs with note: null
+        return savedNoteRefs.map((ref: any) => ({ ...ref, note: null }));
       },
       enabled: !!userId,
     });

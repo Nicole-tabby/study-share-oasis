@@ -43,8 +43,7 @@ export const useProfile = () => {
         }
 
         // Convert the retrieved data to match the ProfileData interface by adding any missing properties
-        // @ts-ignore
-        const profileData: ExtendedProfileData = data || {};
+        const profileData: any = data || {};
         
         return {
           id: profileData.id || userId,
