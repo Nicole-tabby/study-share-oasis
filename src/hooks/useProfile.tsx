@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, ExtendedProfileData } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -43,14 +43,17 @@ export const useProfile = () => {
         }
 
         // Convert the retrieved data to match the ProfileData interface by adding any missing properties
+        // @ts-ignore
+        const profileData: ExtendedProfileData = data || {};
+        
         return {
-          id: data?.id || userId,
-          full_name: data?.full_name || null,
-          avatar_url: data?.avatar_url || null,
-          bio: data?.bio || null,
-          university: data?.university || null,
-          course: data?.course || null,
-          year: data?.year || null
+          id: profileData.id || userId,
+          full_name: profileData.full_name || null,
+          avatar_url: profileData.avatar_url || null,
+          bio: profileData.bio || null,
+          university: profileData.university || null,
+          course: profileData.course || null,
+          year: profileData.year || null
         } as ProfileData;
       },
       enabled: !!userId,

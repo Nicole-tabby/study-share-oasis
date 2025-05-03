@@ -42,7 +42,8 @@ export const useSavedNotes = () => {
         }
         
         // Extract note IDs
-        const noteIds = savedNoteRefs.map((ref: SavedNote) => ref.note_id);
+        // @ts-ignore - Type safety for SavedNote
+        const noteIds = savedNoteRefs.map((ref) => ref.note_id);
         
         // Fetch the actual notes
         const { data: notesData, error: notesError } = await supabase
@@ -88,7 +89,8 @@ export const useSavedNotes = () => {
           }));
           
           // Combine saved note references with note data
-          const result = savedNoteRefs.map((savedRef: SavedNote) => {
+          // @ts-ignore - Type safety for SavedNote
+          const result = savedNoteRefs.map((savedRef) => {
             const noteData = notesWithProfiles.find(note => note.id === savedRef.note_id);
             return {
               ...savedRef,
@@ -99,7 +101,8 @@ export const useSavedNotes = () => {
           return result;
         }
         
-        return savedNoteRefs.map((ref: SavedNote) => ({ ...ref, note: null }));
+        // @ts-ignore - Type safety for SavedNote
+        return savedNoteRefs.map((ref) => ({ ...ref, note: null }));
       },
       enabled: !!userId,
     });

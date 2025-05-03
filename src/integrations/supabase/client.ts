@@ -12,10 +12,22 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // @ts-ignore - Temporarily ignoring type issues with saved_notes table
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-// Helper type for saved notes since it's not in the auto-generated types
+// Helper types for database tables not in auto-generated types
 export interface SavedNote {
   id: string;
   user_id: string;
   note_id: string;
   created_at: string;
+}
+
+export interface ExtendedProfileData {
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  university: string | null;
+  course: string | null;
+  year: string | null;
+  created_at: string;
+  updated_at: string;
 }
