@@ -42,17 +42,18 @@ export const useProfile = () => {
           throw error;
         }
 
-        // Convert the retrieved data to match the ProfileData interface by adding any missing properties
-        const profileData: any = data || {};
+        // Cast data to the right type with potential missing fields
+        const profileData = data || {};
         
         return {
           id: profileData.id || userId,
           full_name: profileData.full_name || null,
           avatar_url: profileData.avatar_url || null,
-          bio: profileData.bio || null,
-          university: profileData.university || null,
-          course: profileData.course || null,
-          year: profileData.year || null
+          // Handle potentially missing fields (using type assertion)
+          bio: (profileData as any).bio || null,
+          university: (profileData as any).university || null,
+          course: (profileData as any).course || null,
+          year: (profileData as any).year || null
         } as ProfileData;
       },
       enabled: !!userId,

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,8 @@ import { useSavedNotes } from '@/hooks/useSavedNotes';
 import { format } from 'date-fns';
 import NoteCard from '@/components/NoteCard';
 import { Spinner } from '@/components/Spinner';
+// Import supabase client
+import { supabase } from '@/integrations/supabase/client';
 
 const Profile = () => {
   const { userId } = useParams();
