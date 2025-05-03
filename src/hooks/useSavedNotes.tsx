@@ -3,9 +3,10 @@ import { useGetSavedNotes } from './savedNotes/useGetSavedNotes';
 import { useSaveNote } from './savedNotes/useSaveNote';
 import { useUnsaveNote } from './savedNotes/useUnsaveNote';
 import { useIsNoteSaved } from './savedNotes/useIsNoteSaved';
-import { SavedNoteWithData } from './savedNotes/savedNotesUtils';
+import { type SavedNoteWithData } from './savedNotes/savedNotesUtils';
 
-export { SavedNoteWithData };
+// Export the type using the 'export type' syntax for isolatedModules compatibility
+export type { SavedNoteWithData };
 
 export const useSavedNotes = () => {
   return {

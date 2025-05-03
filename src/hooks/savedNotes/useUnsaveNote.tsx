@@ -1,7 +1,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
+import { unsaveNote } from './savedNotesUtils';
 
 export const useUnsaveNote = () => {
   const { toast } = useToast();
@@ -9,12 +9,7 @@ export const useUnsaveNote = () => {
 
   return useMutation({
     mutationFn: async ({ userId, noteId }: { userId: string; noteId: string }) => {
-      // @ts-ignore
-      const { error } = await supabase
-        .from('saved_notes')
-        .delete()
-        .eq('user_id', userId)
-        .eq('note_id', noteId);
+      const { data, error } = await unsaveNote(userId, noteId);
         
       if (error) {
         toast({

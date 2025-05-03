@@ -1,63 +1,132 @@
 
-import { supabase, SavedNote } from '@/integrations/supabase/client';
-import { Note } from '../useNotes';
+import { supabase } from '@/integrations/supabase/client';
+import { Note } from '@/hooks/useNotes';
 
+// Define the SavedNote interface
+export interface SavedNote {
+  id: string;
+  user_id: string;
+  note_id: string;
+  created_at: string;
+}
+
+// Define the SavedNoteWithData interface that includes the actual note data
 export interface SavedNoteWithData extends SavedNote {
-  note?: Note;
+  note: Note | null;
 }
 
-/**
- * Utility function to fetch saved note references for a user
- */
-export async function fetchSavedNoteRefs(userId: string) {
-  // @ts-ignore - The saved_notes table is not in the auto-generated types
-  const { data: savedNoteRefs, error } = await supabase
-    .from('saved_notes')
-    .select('*')
-    .eq('user_id', userId);
+// Utility function to fetch saved notes data
+export const fetchSavedNotes = async (userId: string) => {
+  try {
+    // First, get the saved notes references
+    // @ts-ignore
+    const { data: savedNoteRefs, error: savedNotesError } = await supabase
+      .from('saved_notes')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+      
+    if (savedNotesError) {
+      throw savedNotesError;
+    }
     
-  return { savedNoteRefs, error };
-}
+    if (!savedNoteRefs || savedNoteRefs.length === 0) {
+      return { data: [], error: null };
+    }
+    
+    // Extract note IDs
+    const noteIds = savedNoteRefs.map((ref: SavedNote) => ref.note_id);
+    
+    // Fetch the actual notes
+    const { data: notesData, error: notesError } = await supabase
+      .from('notes')
+      .select('*, profiles:user_id(*)')
+      .in('id', noteIds);
+      
+    if (notesError) {
+      throw notesError;
+    }
+    
+    // Combine saved note references with note data
+    const result = savedNoteRefs.map((savedRef: SavedNote) => {
+      const noteData = notesData?.find(note => note.id === savedRef.note_id);
+      return {
+        ...savedRef,
+        note: noteData || null
+      };
+    });
+    
+    return { data: result, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
 
-/**
- * Utility function to fetch notes by their IDs
- */
-export async function fetchNotesByIds(noteIds: string[]) {
-  const { data: notesData, error } = await supabase
-    .from('notes')
-    .select('*')
-    .in('id', noteIds);
+// Utility function to check if a note is saved by a user
+export const checkIfNoteSaved = async (userId: string, noteId: string) => {
+  try {
+    // @ts-ignore
+    const { data, error } = await supabase
+      .from('saved_notes')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('note_id', noteId)
+      .maybeSingle();
+      
+    if (error) {
+      throw error;
+    }
     
-  return { notesData, error };
-}
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
 
-/**
- * Utility function to fetch profiles for note authors
- */
-export async function fetchProfilesForNotes(notesData: any[]) {
-  // Get unique user IDs from notes
-  const userIds = [...new Set(notesData.map(note => note.user_id))];
-  
-  // Fetch all relevant profiles in one query
-  const { data: profilesData, error } = await supabase
-    .from('profiles')
-    .select('id, full_name, avatar_url')
-    .in('id', userIds);
+// Utility function to save a note for a user
+export const saveNote = async (userId: string, noteId: string) => {
+  try {
+    // First check if it's already saved
+    const { data: existingData } = await checkIfNoteSaved(userId, noteId);
     
-  return { profilesData, error };
-}
+    if (existingData) {
+      // Note is already saved, no need to save again
+      return { data: existingData, error: null };
+    }
+    
+    // @ts-ignore
+    const { data, error } = await supabase
+      .from('saved_notes')
+      .insert({ user_id: userId, note_id: noteId })
+      .select()
+      .single();
+      
+    if (error) {
+      throw error;
+    }
+    
+    return { data, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
 
-/**
- * Check if a note is already saved by a user
- */
-export async function checkIfNoteSaved(userId: string, noteId: string) {
-  // @ts-ignore
-  const { data, error } = await supabase
-    .from('saved_notes')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('note_id', noteId)
-    .maybeSingle();
+// Utility function to unsave a note for a user
+export const unsaveNote = async (userId: string, noteId: string) => {
+  try {
+    // @ts-ignore
+    const { error } = await supabase
+      .from('saved_notes')
+      .delete()
+      .eq('user_id', userId)
+      .eq('note_id', noteId);
+      
+    if (error) {
+      throw error;
+    }
     
-  return { data, error };
-}
+    return { data: true, error: null };
+  } catch (error) {
+    return { data: null, error };
+  }
+};
