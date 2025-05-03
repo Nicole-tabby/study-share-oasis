@@ -86,12 +86,12 @@ export const useNotes = () => {
       queryFn: async () => {
         if (!noteId) throw new Error('Note ID is required');
         
-        // Change the join query to explicitly select the fields we want from profiles
+        // Fix the join query - use the correct format for joining tables
         const { data, error } = await supabase
           .from('notes')
           .select(`
             *,
-            profiles:user_id(full_name, avatar_url)
+            profiles(full_name, avatar_url)
           `)
           .eq('id', noteId)
           .maybeSingle();
