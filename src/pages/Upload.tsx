@@ -10,29 +10,29 @@ import { Upload as UploadIcon, X, FileText } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNotes } from '@/hooks/useNotes';
+import { supabase } from '@/integrations/supabase/client';
 
 const Upload = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isUploading, setIsUploading] = useState(false);
+  const { user } = useAuth();
+  const { useCreateNote } = useNotes();
+  const createNote = useCreateNote();
   
   const [formData, setFormData] = useState({
     title: '',
     course: '',
     semester: '',
-    description: ''
+    description: '',
+    isPublic: true
   });
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  React.useEffect(() => {
-    // Check authentication
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    if (!isAuthenticated) {
-      navigate('/login');
-    }
-  }, [navigate]);
+  const [isUploading, setIsUploading] = useState(false);
   
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -72,6 +72,13 @@ const Upload = () => {
       });
     }
   };
+
+  const handleSwitchChange = (checked: boolean) => {
+    setFormData({
+      ...formData,
+      isPublic: checked
+    });
+  };
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -88,10 +95,10 @@ const Upload = () => {
     }
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    if (!validateForm() || !user) {
       toast({
         title: "Please fix the errors",
         variant: "destructive"
@@ -101,61 +108,44 @@ const Upload = () => {
     
     setIsUploading(true);
     
-    // Simulate upload process
-    setTimeout(() => {
-      try {
-        // Get stored notes or initialize empty array
-        const storedNotes = localStorage.getItem('allNotes');
-        const allNotes = storedNotes ? JSON.parse(storedNotes) : [];
-        
-        // Get user data
-        const userData = localStorage.getItem('user');
-        const user = userData ? JSON.parse(userData) : { fullName: 'Anonymous User' };
-        
-        // Create new note object
-        const newNote = {
-          id: `note-${Date.now()}`,
-          title: formData.title,
-          course: formData.course,
-          semester: formData.semester,
-          description: formData.description,
-          fileName: selectedFile?.name || 'unnamed.pdf',
-          fileUrl: '#',
-          downloads: 0,
-          isPopular: false,
-          author: user.fullName,
-          authorId: 'current-user',
-          date: new Date().toISOString().split('T')[0]
-        };
-        
-        // Add to all notes
-        const updatedNotes = [newNote, ...allNotes];
-        localStorage.setItem('allNotes', JSON.stringify(updatedNotes));
-        
-        // Add to user notes
-        const userNotes = localStorage.getItem('userNotes');
-        const parsedUserNotes = userNotes ? JSON.parse(userNotes) : [];
-        const updatedUserNotes = [newNote, ...parsedUserNotes];
-        localStorage.setItem('userNotes', JSON.stringify(updatedUserNotes));
-        
-        toast({
-          title: "Note uploaded successfully!",
-          description: "Your note is now available for others to view."
-        });
-        
-        // Navigate back after successful upload
-        navigate('/browse');
-      } catch (error) {
-        console.error('Error saving note:', error);
-        toast({
-          title: "Failed to upload note",
-          description: "There was a problem uploading your note. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsUploading(false);
-      }
-    }, 1500);
+    try {
+      // 1. Upload file to Supabase Storage
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `notes/${user.id}/${fileName}`;
+      
+      // Simulate file upload
+      // In production, use actual Supabase storage:
+      // const { error: uploadError } = await supabase.storage
+      //   .from('notes')
+      //   .upload(filePath, selectedFile);
+      
+      // if (uploadError) throw uploadError;
+      
+      // 2. Create note in database
+      await createNote.mutateAsync({
+        title: formData.title,
+        course: formData.course,
+        semester: formData.semester,
+        description: formData.description || null,
+        file_name: selectedFile.name,
+        file_url: filePath,
+        user_id: user.id,
+        public: formData.isPublic
+      });
+      
+      // Navigate to the browse page after successful upload
+      navigate('/browse');
+    } catch (error) {
+      console.error('Error saving note:', error);
+      toast({
+        title: "Failed to upload note",
+        description: "There was a problem uploading your note. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -168,10 +158,10 @@ const Upload = () => {
             <h1 className="text-2xl font-bold dark:text-white">Upload Study Notes</h1>
             <Button 
               variant="outline" 
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/browse')}
               className="dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
             >
-              Back
+              Back to Browse
             </Button>
           </div>
           
@@ -232,6 +222,15 @@ const Upload = () => {
                   />
                 </div>
                 
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    id="public" 
+                    checked={formData.isPublic}
+                    onCheckedChange={handleSwitchChange}
+                  />
+                  <Label htmlFor="public" className="dark:text-gray-300">Make this note public</Label>
+                </div>
+                
                 <div>
                   <Label className="text-base dark:text-gray-300">File Upload</Label>
                   
@@ -284,9 +283,9 @@ const Upload = () => {
                   <Button 
                     type="submit" 
                     className="w-full bg-studyhub-500 hover:bg-studyhub-600"
-                    disabled={isUploading}
+                    disabled={isUploading || createNote.isPending}
                   >
-                    {isUploading ? (
+                    {isUploading || createNote.isPending ? (
                       <>
                         <span className="animate-spin mr-2">
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24">

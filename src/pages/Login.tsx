@@ -13,6 +13,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,11 +33,13 @@ const Login = () => {
       return;
     }
     
+    setIsSubmitting(true);
     const { error } = await signIn(email, password);
+    setIsSubmitting(false);
     
-    if (!error) {
-      // Navigation will happen automatically in the PublicRoute component
-      console.log("Login successful, redirecting to:", from);
+    if (error) {
+      // Reset password field on error to let user try again
+      setPassword('');
     }
   };
   
@@ -94,7 +97,7 @@ const Login = () => {
                   placeholder="johnsmith@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
+                  disabled={loading || isSubmitting}
                   required
                 />
               </div>
@@ -113,14 +116,14 @@ const Login = () => {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
+                    disabled={loading || isSubmitting}
                     required
                   />
                   <button 
                     type="button"
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading}
+                    disabled={loading || isSubmitting}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -130,9 +133,14 @@ const Login = () => {
               <Button 
                 type="submit" 
                 className="w-full bg-studyhub-500 hover:bg-studyhub-600 h-11" 
-                disabled={loading}
+                disabled={loading || isSubmitting}
               >
-                {loading ? "Signing in..." : "Sign In"}
+                {loading || isSubmitting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+                    Signing in...
+                  </div>
+                ) : "Sign In"}
               </Button>
               
               <div className="text-center text-sm text-gray-600">

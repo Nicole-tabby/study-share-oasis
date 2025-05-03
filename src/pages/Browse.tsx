@@ -7,158 +7,27 @@ import NavigationBar from '@/components/NavigationBar';
 import { Card, CardContent } from "@/components/ui/card";
 import { motion } from 'framer-motion';
 import { useToast } from "@/components/ui/use-toast";
-import { Search, Filter, Bookmark, BookmarkCheck, ArrowUp, ArrowDown, Clock, FileText } from 'lucide-react';
+import { Search, Filter, Bookmark, BookmarkCheck, ArrowUp, ArrowDown, Clock, FileText, User } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from '@/contexts/AuthContext';
-
-interface Note {
-  id: string;
-  title: string;
-  course: string;
-  semester: string;
-  description: string;
-  fileName: string;
-  fileUrl: string;
-  downloads: number;
-  isPopular: boolean;
-  author: string;
-  authorId: string;
-  date: string;
-}
+import { useNotes } from '@/hooks/useNotes';
 
 const Browse = () => {
   const [semester, setSemester] = useState('');
   const [courseYear, setCourseYear] = useState('');
   const [courseName, setCourseName] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [savedNotes, setSavedNotes] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [filteredNotes, setFilteredNotes] = useState<any[]>([]);
   
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  
-  // Check authentication and load notes
+  const { usePublicNotes } = useNotes();
+  const { data: notes = [], isLoading, error } = usePublicNotes();
+
+  // Filter notes based on search criteria
   useEffect(() => {
-    if (user) {
-      loadNotes();
-      
-      // Load saved notes IDs
-      const savedIds = localStorage.getItem('savedNotesIds');
-      if (savedIds) {
-        try {
-          setSavedNotes(JSON.parse(savedIds));
-        } catch (error) {
-          console.error("Error parsing saved note IDs:", error);
-        }
-      }
-    }
-  }, [user]);
-  
-  const loadNotes = () => {
-    setIsLoading(true);
-    
-    // Load notes from localStorage or use sample data if none exists
-    const storedNotes = localStorage.getItem('allNotes');
-    if (storedNotes) {
-      try {
-        const parsedNotes = JSON.parse(storedNotes);
-        setNotes(parsedNotes);
-        setFilteredNotes(parsedNotes);
-      } catch (error) {
-        console.error("Error parsing notes:", error);
-        generateSampleNotes();
-      }
-    } else {
-      generateSampleNotes();
-    }
-    
-    setIsLoading(false);
-  };
-  
-  const generateSampleNotes = () => {
-    const sampleNotes: Note[] = [
-      {
-        id: "note-1",
-        title: "Introduction to Computer Science",
-        course: "CS101",
-        semester: "Fall 2023",
-        description: "Comprehensive notes covering basic programming concepts, algorithms, and data structures.",
-        fileName: "cs101_intro.pdf",
-        fileUrl: "#",
-        downloads: 342,
-        isPopular: true,
-        author: "Alex Johnson",
-        authorId: "user-1",
-        date: "2023-09-15"
-      },
-      {
-        id: "note-2",
-        title: "Advanced Calculus Formulas",
-        course: "MATH301",
-        semester: "Spring 2023",
-        description: "Complete formula sheet for advanced calculus with examples and applications.",
-        fileName: "calculus_formulas.pdf",
-        fileUrl: "#",
-        downloads: 289,
-        isPopular: true,
-        author: "Maria Garcia",
-        authorId: "user-2",
-        date: "2023-04-22"
-      },
-      {
-        id: "note-3",
-        title: "Organic Chemistry Lab Manual",
-        course: "CHEM202",
-        semester: "Fall 2022",
-        description: "Detailed lab manual with procedures, safety guidelines, and expected results.",
-        fileName: "ochem_lab.pdf",
-        fileUrl: "#",
-        downloads: 175,
-        isPopular: false,
-        author: "James Wilson",
-        authorId: "user-3",
-        date: "2022-11-30"
-      },
-      {
-        id: "note-4",
-        title: "World History Timeline",
-        course: "HIST101",
-        semester: "Spring 2023",
-        description: "Comprehensive timeline of major world events from ancient civilizations to modern era.",
-        fileName: "history_timeline.pdf",
-        fileUrl: "#",
-        downloads: 201,
-        isPopular: false,
-        author: "Emily Zhang",
-        authorId: "user-4",
-        date: "2023-03-12"
-      },
-      {
-        id: "note-5",
-        title: "Economics Principles Summary",
-        course: "ECON201",
-        semester: "Fall 2023",
-        description: "Summary of key microeconomic and macroeconomic principles with graphs and examples.",
-        fileName: "econ_summary.pdf",
-        fileUrl: "#",
-        downloads: 312,
-        isPopular: true,
-        author: "Michael Brown",
-        authorId: "user-5",
-        date: "2023-10-05"
-      }
-    ];
-    
-    setNotes(sampleNotes);
-    setFilteredNotes(sampleNotes);
-    localStorage.setItem('allNotes', JSON.stringify(sampleNotes));
-  };
-  
-  const handleSearch = () => {
     let results = [...notes];
     
     if (semester) {
@@ -168,8 +37,10 @@ const Browse = () => {
     }
     
     if (courseYear) {
+      const year = courseYear.toLowerCase();
       results = results.filter(note => 
-        note.semester.toLowerCase().includes(courseYear.toLowerCase())
+        note.semester.toLowerCase().includes(year) || 
+        note.course.toLowerCase().includes(year)
       );
     }
     
@@ -179,21 +50,37 @@ const Browse = () => {
       );
     }
     
-    const sortedResults = sortNotes(results, sortOrder);
-    setFilteredNotes(sortedResults);
-    
+    // Sort results
+    results = sortNotes(results, sortOrder);
+    setFilteredNotes(results);
+  }, [notes, semester, courseYear, courseName, sortOrder]);
+  
+  // Load saved notes from localStorage
+  useEffect(() => {
+    const savedIds = localStorage.getItem('savedNotesIds');
+    if (savedIds) {
+      try {
+        setSavedNotes(JSON.parse(savedIds));
+      } catch (error) {
+        console.error("Error parsing saved note IDs:", error);
+        setSavedNotes([]);
+      }
+    }
+  }, []);
+  
+  const handleSearch = () => {
     toast({
-      title: "Search completed",
-      description: results.length > 0 
-        ? `Found ${results.length} matching notes` 
+      title: "Search results",
+      description: filteredNotes.length > 0 
+        ? `Found ${filteredNotes.length} matching notes` 
         : "No matching notes found",
     });
   };
   
-  const sortNotes = (noteList: Note[], order: 'newest' | 'oldest') => {
+  const sortNotes = (noteList: any[], order: 'newest' | 'oldest') => {
     return [...noteList].sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
       return order === 'newest' ? dateB - dateA : dateA - dateB;
     });
   };
@@ -225,16 +112,12 @@ const Browse = () => {
     
     setSavedNotes(updatedSavedIds);
     localStorage.setItem('savedNotesIds', JSON.stringify(updatedSavedIds));
-    
-    // Update saved notes in localStorage
-    const savedNotesList = notes.filter(note => updatedSavedIds.includes(note.id));
-    localStorage.setItem('savedNotes', JSON.stringify(savedNotesList));
   };
   
   const handleViewNote = (noteId: string) => {
     navigate(`/note/${noteId}`);
   };
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
@@ -244,6 +127,26 @@ const Browse = () => {
             <div className="w-16 h-16 border-4 border-studyhub-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-500 dark:text-gray-400">Loading notes...</p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+        <NavigationBar />
+        <div className="container mx-auto px-4 py-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8 text-red-700">
+            <h3 className="font-medium">Error loading notes</h3>
+            <p className="text-sm">Please try refreshing the page.</p>
+          </div>
+          <Button 
+            onClick={() => window.location.reload()}
+            className="bg-studyhub-500 hover:bg-studyhub-600"
+          >
+            Refresh
+          </Button>
         </div>
       </div>
     );
@@ -350,23 +253,26 @@ const Browse = () => {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
+                  layout
                 >
                   <Card className="h-full hover:shadow-md transition-shadow overflow-hidden group dark:bg-gray-800 dark:border-gray-700">
                     <CardContent className="p-0 relative">
                       <div className="p-4">
                         <div className="flex items-center gap-2 mb-3">
                           <div className="h-8 w-8 bg-studyhub-100 text-studyhub-600 dark:bg-studyhub-900 dark:text-studyhub-300 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-medium">{note.author.charAt(0)}</span>
+                            <User className="h-4 w-4" />
                           </div>
-                          <span className="text-sm font-medium dark:text-gray-300">{note.author}</span>
+                          <span className="text-sm font-medium dark:text-gray-300">
+                            {note.profiles?.full_name || 'User'}
+                          </span>
                         </div>
                         
-                        <h3 className="font-semibold mb-1 dark:text-white">{note.title}</h3>
+                        <h3 className="font-semibold mb-1 dark:text-white line-clamp-2">{note.title}</h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">{note.course}</p>
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{note.semester}</p>
                         
                         <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mb-3">
-                          {note.isPopular && (
+                          {note.downloads > 100 && (
                             <div className="flex items-center gap-1 mr-3 text-studyhub-600 dark:text-studyhub-400">
                               <ArrowUp className="h-3 w-3" />
                               <span>Popular</span>
@@ -374,7 +280,7 @@ const Browse = () => {
                           )}
                           <div className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            <span>{note.downloads} downloads</span>
+                            <span>{note.downloads || 0} downloads</span>
                           </div>
                         </div>
                         
@@ -421,7 +327,6 @@ const Browse = () => {
                     setSemester('');
                     setCourseYear('');
                     setCourseName('');
-                    setFilteredNotes(notes);
                   }}
                 >
                   View All Notes

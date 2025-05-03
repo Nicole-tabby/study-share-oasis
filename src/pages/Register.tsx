@@ -15,6 +15,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
@@ -42,11 +43,14 @@ const Register = () => {
       return;
     }
     
+    setIsSubmitting(true);
     const { error } = await signUp(email, password, fullName);
+    setIsSubmitting(false);
     
-    if (!error) {
-      // Navigation will happen automatically in the PublicRoute component
-      console.log("Registration successful, redirecting to:", from);
+    if (error) {
+      // Reset password fields on error to let user try again
+      setPassword('');
+      setConfirmPassword('');
     }
   };
   
@@ -103,7 +107,7 @@ const Register = () => {
                   placeholder="John Smith"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  disabled={loading}
+                  disabled={loading || isSubmitting}
                   required
                 />
               </div>
@@ -116,7 +120,7 @@ const Register = () => {
                   placeholder="johnsmith@gmail.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
+                  disabled={loading || isSubmitting}
                   required
                 />
               </div>
@@ -130,14 +134,14 @@ const Register = () => {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
+                    disabled={loading || isSubmitting}
                     required
                   />
                   <button 
                     type="button"
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading}
+                    disabled={loading || isSubmitting}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -148,11 +152,11 @@ const Register = () => {
                 <Label htmlFor="confirmPassword">Re-enter password</Label>
                 <Input
                   id="confirmPassword"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  disabled={loading}
+                  disabled={loading || isSubmitting}
                   required
                 />
               </div>
@@ -160,9 +164,14 @@ const Register = () => {
               <Button 
                 type="submit" 
                 className="w-full bg-studyhub-500 hover:bg-studyhub-600 h-11" 
-                disabled={loading}
+                disabled={loading || isSubmitting}
               >
-                {loading ? "Creating account..." : "Sign Up"}
+                {loading || isSubmitting ? (
+                  <div className="flex items-center justify-center">
+                    <div className="w-5 h-5 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+                    Creating account...
+                  </div>
+                ) : "Sign Up"}
               </Button>
               
               <div className="text-center text-sm text-gray-600">

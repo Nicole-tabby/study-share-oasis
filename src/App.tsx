@@ -21,6 +21,7 @@ const queryClient = new QueryClient({
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      staleTime: 10000,
     },
   },
 });
@@ -39,8 +40,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }, [user, loading, navigate, location]);
 
   if (loading) {
-    // You could return a loading spinner here
-    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="h-12 w-12 border-4 border-studyhub-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   return user ? <>{children}</> : null;
@@ -62,7 +69,14 @@ const PublicRoute = ({ children }: { children: React.ReactNode }) => {
   }, [user, loading, navigate, from]);
   
   if (loading) {
-    return <div className="flex h-screen w-full items-center justify-center">Loading...</div>;
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="h-12 w-12 border-4 border-studyhub-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    );
   }
   
   return !user ? <>{children}</> : null;

@@ -1,133 +1,73 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import NavigationBar from '@/components/NavigationBar';
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, Download, FileText, Eye } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Eye, Trash2 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
-
-interface Note {
-  id: string;
-  title: string;
-  course: string;
-  semester: string;
-  description: string;
-  fileName: string;
-  fileUrl: string;
-  downloads: number;
-  isPopular: boolean;
-  author: string;
-  authorId: string;
-  date: string;
-  views: number;
-}
+import { useNotes } from '@/hooks/useNotes';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ViewNote = () => {
   const { noteId } = useParams<{ noteId: string }>();
-  const [note, setNote] = useState<Note | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  useEffect(() => {
-    // Check authentication
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
-    // Fetch note data
-    const storedNotes = localStorage.getItem('allNotes');
-    if (storedNotes && noteId) {
-      try {
-        const allNotes = JSON.parse(storedNotes);
-        const foundNote = allNotes.find((n: Note) => n.id === noteId);
-        
-        if (foundNote) {
-          // Add view counter if not present
-          if (!foundNote.views) {
-            foundNote.views = 0;
-          }
-          
-          // Increment view counter
-          foundNote.views += 1;
-          
-          // Update note in localStorage
-          const updatedNotes = allNotes.map((n: Note) => {
-            if (n.id === noteId) {
-              return { ...foundNote };
-            }
-            return n;
-          });
-          
-          localStorage.setItem('allNotes', JSON.stringify(updatedNotes));
-          
-          setNote(foundNote);
-        } else {
-          toast({
-            title: "Note not found",
-            description: "The note you're looking for doesn't exist or has been removed.",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching note:", error);
-        toast({
-          title: "Error",
-          description: "There was a problem loading this note",
-          variant: "destructive"
-        });
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      setLoading(false);
-    }
-  }, [noteId, navigate, toast]);
+  const { useSingleNote, useIncrementDownload, useDeleteNote } = useNotes();
+  const { data: note, isLoading, error } = useSingleNote(noteId);
+  const incrementDownload = useIncrementDownload();
+  const deleteNote = useDeleteNote();
 
   const handleDownload = () => {
     if (!note) return;
     
-    // Increment download counter
-    const storedNotes = localStorage.getItem('allNotes');
-    if (storedNotes) {
-      try {
-        const allNotes = JSON.parse(storedNotes);
-        const updatedNotes = allNotes.map((n: Note) => {
-          if (n.id === noteId) {
-            return { ...n, downloads: (n.downloads || 0) + 1 };
-          }
-          return n;
-        });
-        
-        localStorage.setItem('allNotes', JSON.stringify(updatedNotes));
-        
-        // Update current note state
-        setNote(prev => prev ? { ...prev, downloads: (prev.downloads || 0) + 1 } : null);
-        
-        toast({
-          title: "Download started",
-          description: "Your file download has started"
-        });
-        
-        // In a real app, this would download the actual file
-        // For this demo, we'll just simulate a download
-        setTimeout(() => {
-          toast({
-            title: "Note downloaded",
-            description: `${note.fileName} has been downloaded successfully.`
-          });
-        }, 1500);
-      } catch (error) {
-        console.error("Error updating download count:", error);
-      }
+    incrementDownload.mutate(note.id);
+    
+    toast({
+      title: "Download started",
+      description: "Your file download has started"
+    });
+    
+    // In a real app, this would download the actual file
+    // For this demo, we'll just simulate a download
+    setTimeout(() => {
+      toast({
+        title: "Note downloaded",
+        description: `${note.file_name} has been downloaded successfully.`
+      });
+    }, 1500);
+  };
+
+  const handleDeleteNote = async () => {
+    if (!note) return;
+    
+    try {
+      await deleteNote.mutateAsync(note.id);
+      navigate('/browse', { replace: true });
+    } catch (error) {
+      console.error("Error deleting note:", error);
+    } finally {
+      setIsDeleteDialogOpen(false);
     }
   };
 
-  if (loading) {
+  const isOwner = user?.id === note?.user_id;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
         <NavigationBar />
@@ -138,17 +78,17 @@ const ViewNote = () => {
     );
   }
 
-  if (!note) {
+  if (error || !note) {
     return (
       <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
         <NavigationBar />
         <div className="container mx-auto px-4 py-8">
           <Button 
             variant="outline" 
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/browse')}
             className="mb-6 dark:border-gray-700 dark:text-gray-300"
           >
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Browse
           </Button>
           
           <Card className="p-8 text-center dark:bg-gray-800">
@@ -157,7 +97,7 @@ const ViewNote = () => {
             <p className="text-gray-500 dark:text-gray-400 mb-6">
               The study note you're looking for doesn't exist or may have been removed.
             </p>
-            <Button onClick={() => navigate('/browse')}>
+            <Button onClick={() => navigate('/browse')} className="bg-studyhub-500 hover:bg-studyhub-600">
               Browse other notes
             </Button>
           </Card>
@@ -172,30 +112,41 @@ const ViewNote = () => {
       
       <main className="flex-1 py-8">
         <div className="container max-w-4xl mx-auto px-4">
-          <div className="flex items-center mb-6">
+          <div className="flex items-center justify-between mb-6">
             <Button 
               variant="outline" 
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/browse')}
               className="dark:border-gray-700 dark:text-gray-300"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Browse
             </Button>
+            
+            {isOwner && (
+              <Button 
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Note
+              </Button>
+            )}
           </div>
           
           <Card className="p-6 bg-white dark:bg-gray-800 shadow-sm rounded-xl mb-8">
             <div className="flex items-center gap-3 mb-6">
               <div className="h-12 w-12 bg-studyhub-100 text-studyhub-600 dark:bg-studyhub-900 dark:text-studyhub-300 rounded-full flex items-center justify-center">
-                <span className="text-lg font-medium">{note.author.charAt(0)}</span>
+                <span className="text-lg font-medium">{(note.profiles?.full_name || 'User').charAt(0)}</span>
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold dark:text-white">{note.title}</h2>
                   <Badge variant="outline" className="bg-studyhub-50 text-studyhub-700 border-studyhub-200 dark:bg-studyhub-900 dark:text-studyhub-300 dark:border-studyhub-800">
-                    <Eye className="mr-1 h-3 w-3" /> Public Note
+                    <Eye className="mr-1 h-3 w-3" /> {note.public ? "Public Note" : "Private Note"}
                   </Badge>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Uploaded by {note.author} • {new Date(note.date).toLocaleDateString()}
+                  Uploaded by {note.profiles?.full_name || 'User'} • {new Date(note.created_at).toLocaleDateString()}
                 </p>
               </div>
             </div>
@@ -223,9 +174,9 @@ const ViewNote = () => {
                 <div className="flex items-center space-x-3 mb-4">
                   <FileText className="h-8 w-8 text-studyhub-500" />
                   <div>
-                    <p className="font-medium dark:text-gray-200">{note.fileName}</p>
+                    <p className="font-medium dark:text-gray-200">{note.file_name}</p>
                     <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-3">
-                      <span>{note.downloads} downloads</span>
+                      <span>{note.downloads || 0} downloads</span>
                       <span>•</span>
                       <span>{note.views || 1} views</span>
                     </div>
@@ -235,15 +186,47 @@ const ViewNote = () => {
                 <Button 
                   onClick={handleDownload} 
                   className="mt-auto bg-studyhub-500 hover:bg-studyhub-600"
+                  disabled={incrementDownload.isPending}
                 >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Note
+                  {incrementDownload.isPending ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Note
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
           </Card>
         </div>
       </main>
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete your note. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteNote} className="bg-red-600 hover:bg-red-700">
+              {deleteNote.isPending ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-t-transparent border-white rounded-full animate-spin mr-2"></div>
+                  Deleting...
+                </>
+              ) : "Delete Note"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
