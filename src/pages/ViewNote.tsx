@@ -1,14 +1,14 @@
-
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import NavigationBar from '@/components/NavigationBar';
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, Download, FileText, Eye, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Eye, Trash2, BookmarkPlus, BookmarkX } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { useNotes } from '@/hooks/useNotes';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSavedNotes } from '@/hooks/useSavedNotes';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +31,11 @@ const ViewNote = () => {
   const { data: note, isLoading, error } = useSingleNote(noteId);
   const incrementDownload = useIncrementDownload();
   const deleteNote = useDeleteNote();
+
+  const { useIsNoteSaved, useSaveNote, useUnsaveNote } = useSavedNotes();
+  const { data: isNoteSaved, isLoading: isCheckingSaved } = useIsNoteSaved(user?.id, noteId);
+  const saveNote = useSaveNote();
+  const unsaveNote = useUnsaveNote();
 
   const handleDownload = () => {
     if (!note) return;
@@ -63,6 +68,22 @@ const ViewNote = () => {
     } finally {
       setIsDeleteDialogOpen(false);
     }
+  };
+
+  const handleSaveNote = async () => {
+    if (!user || !noteId) return;
+    await saveNote.mutateAsync({
+      userId: user.id,
+      noteId: noteId
+    });
+  };
+
+  const handleUnsaveNote = async () => {
+    if (!user || !noteId) return;
+    await unsaveNote.mutateAsync({
+      userId: user.id,
+      noteId: noteId
+    });
   };
 
   const isOwner = user?.id === note?.user_id;
@@ -207,6 +228,32 @@ const ViewNote = () => {
           </Card>
         </div>
       </main>
+      
+      {user && note && user.id !== note.user_id && (
+        <>
+          {!isNoteSaved ? (
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleSaveNote}
+              disabled={saveNote.isPending || isCheckingSaved}
+            >
+              <BookmarkPlus size={16} />
+              Save Note
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              className="flex items-center gap-2"
+              onClick={handleUnsaveNote}
+              disabled={unsaveNote.isPending || isCheckingSaved}
+            >
+              <BookmarkX size={16} />
+              Unsave Note
+            </Button>
+          )}
+        </>
+      )}
       
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

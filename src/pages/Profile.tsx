@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import NavigationBar from '@/components/NavigationBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,137 +8,121 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { motion } from 'framer-motion';
 import { useToast } from "@/components/ui/use-toast";
-import { Edit, Image, Heart, MessageSquare, Bookmark, User, LogOut, Upload, FileText } from 'lucide-react';
+import { Edit, Image, FileText, LogOut, Upload } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-
-interface UserData {
-  fullName: string;
-  email: string;
-  avatar?: string;
-  bio?: string;
-  course?: string;
-  university?: string;
-  year?: string;
-}
-
-interface UserNote {
-  id: string;
-  title: string;
-  description: string;
-  course: string;
-  date: string;
-  fileName: string;
-}
+import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
+import { useNotes } from '@/hooks/useNotes';
+import { useSavedNotes } from '@/hooks/useSavedNotes';
+import { format } from 'date-fns';
+import NoteCard from '@/components/NoteCard';
+import { Spinner } from '@/components/Spinner';
 
 const Profile = () => {
-  const [userData, setUserData] = useState<UserData | null>(null);
+  const { userId } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // Determine if this is the current user's profile or someone else's
+  const isCurrentUser = !userId || (user && userId === user.id);
+  const profileUserId = isCurrentUser && user ? user.id : userId;
+  
+  // States
   const [isEditing, setIsEditing] = useState(false);
-  const [editedData, setEditedData] = useState<UserData | null>(null);
-  const [userNotes, setUserNotes] = useState<UserNote[]>([]);
-  const [savedNotes, setSavedNotes] = useState<UserNote[]>([]);
+  const [editedData, setEditedData] = useState({
+    full_name: '',
+    bio: '',
+    university: '',
+    course: '',
+    year: 'Freshman',
+  });
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const { toast } = useToast();
-  const navigate = useNavigate();
   
+  // Hooks
+  const { useUserProfile, useUpdateProfile, useUpdateAvatar } = useProfile();
+  const { useUserNotes } = useNotes();
+  const { useGetSavedNotes } = useSavedNotes();
+  
+  // Data fetching
+  const { 
+    data: profileData, 
+    isLoading: isProfileLoading, 
+    error: profileError 
+  } = useUserProfile(profileUserId);
+  
+  const {
+    data: userNotes,
+    isLoading: isNotesLoading,
+    error: notesError
+  } = useUserNotes(profileUserId);
+  
+  const {
+    data: savedNotes,
+    isLoading: isSavedNotesLoading,
+    error: savedNotesError
+  } = useGetSavedNotes(profileUserId);
+  
+  // Mutations
+  const updateProfile = useUpdateProfile();
+  const updateAvatar = useUpdateAvatar();
+  
+  // Set up form data when profile data is loaded
   useEffect(() => {
-    // Check authentication
-    const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
+    if (profileData) {
+      setEditedData({
+        full_name: profileData.full_name || '',
+        bio: profileData.bio || '',
+        university: profileData.university || '',
+        course: profileData.course || '',
+        year: profileData.year || 'Freshman',
+      });
     }
-    
-    // Load user data from localStorage
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUserData(parsedUser);
-        setEditedData(parsedUser);
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-      }
-    } else {
-      // Set default user if none exists
-      const defaultUser = {
-        fullName: 'New User',
-        email: 'user@example.com',
-        bio: 'No bio yet',
-        course: 'No course set',
-        university: 'No university set',
-        year: 'Freshman'
-      };
-      setUserData(defaultUser);
-      setEditedData(defaultUser);
-      localStorage.setItem('user', JSON.stringify(defaultUser));
-    }
-    
-    // Load user notes
-    const storedNotes = localStorage.getItem('userNotes');
-    if (storedNotes) {
-      try {
-        const parsedNotes = JSON.parse(storedNotes);
-        setUserNotes(parsedNotes);
-      } catch (error) {
-        console.error("Error parsing notes:", error);
-        setUserNotes([]);
-      }
-    }
-    
-    // Load saved notes
-    const storedSavedNotes = localStorage.getItem('savedNotes');
-    if (storedSavedNotes) {
-      try {
-        const parsedSavedNotes = JSON.parse(storedSavedNotes);
-        setSavedNotes(parsedSavedNotes);
-      } catch (error) {
-        console.error("Error parsing saved notes:", error);
-        setSavedNotes([]);
-      }
-    }
-  }, [navigate]);
+  }, [profileData]);
   
-  const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    toast({
-      title: "Logged out successfully",
-    });
-    navigate('/login');
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Logged out successfully",
+      });
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+      toast({
+        title: "Error logging out",
+        variant: "destructive"
+      });
+    }
   };
   
-  const handleSaveProfile = () => {
-    if (!editedData) return;
+  const handleSaveProfile = async () => {
+    if (!user) return;
     
-    // Handle avatar upload
-    if (avatarFile) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target && e.target.result) {
-          const updatedData = { 
-            ...editedData,
-            avatar: e.target.result.toString()
-          };
-          
-          setUserData(updatedData);
-          localStorage.setItem('user', JSON.stringify(updatedData));
-          
-          toast({
-            title: "Profile picture updated successfully",
-          });
-        }
-      };
-      reader.readAsDataURL(avatarFile);
-    } else {
-      // Just update other profile data
-      setUserData(editedData);
-      localStorage.setItem('user', JSON.stringify(editedData));
+    try {
+      // Update profile data
+      await updateProfile.mutateAsync({
+        id: user.id,
+        full_name: editedData.full_name,
+        bio: editedData.bio,
+        university: editedData.university,
+        course: editedData.course,
+        year: editedData.year,
+      });
+      
+      // Handle avatar upload if there is a new avatar
+      if (avatarFile) {
+        await updateAvatar.mutateAsync({
+          file: avatarFile,
+          userId: user.id
+        });
+      }
+      
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating profile:', error);
     }
-    
-    setIsEditing(false);
-    toast({
-      title: "Profile updated successfully",
-    });
   };
   
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,9 +141,42 @@ const Profile = () => {
     }
   };
   
-  if (!userData || !editedData) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  // Show loading state
+  if (isProfileLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+        <NavigationBar />
+        <div className="flex-1 flex items-center justify-center">
+          <Spinner size="lg" />
+        </div>
+      </div>
+    );
   }
+  
+  // Show error state
+  if (profileError || !profileData) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+        <NavigationBar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Profile not found</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              {profileError ? (profileError as Error).message : 'Could not find the requested profile'}
+            </p>
+            <Button onClick={() => navigate('/browse')}>
+              Go to Browse
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Calculate avatar URL or fallback
+  const avatarUrl = avatarPreview || 
+    profileData.avatar_url || 
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(profileData.full_name || 'User')}&background=random`;
   
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
@@ -176,13 +193,13 @@ const Profile = () => {
                   <div className="relative group">
                     <Avatar className="h-24 w-24 border-4 border-white shadow-md bg-white">
                       <AvatarImage 
-                        src={avatarPreview || userData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.fullName)}&background=random`} 
-                        alt={userData.fullName}
+                        src={avatarUrl} 
+                        alt={profileData.full_name || 'User'}
                       />
-                      <AvatarFallback>{userData.fullName.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{(profileData.full_name || 'User').charAt(0)}</AvatarFallback>
                     </Avatar>
                     
-                    {isEditing && (
+                    {isCurrentUser && isEditing && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer">
                         <label htmlFor="avatar-upload" className="cursor-pointer">
                           <Edit className="h-6 w-6 text-white" />
@@ -200,24 +217,26 @@ const Profile = () => {
                   </div>
                   
                   <div className="text-white">
-                    <h1 className="text-2xl font-bold">{userData.fullName}</h1>
-                    <p className="text-white/80">{userData.bio}</p>
+                    <h1 className="text-2xl font-bold">{profileData.full_name || 'User'}</h1>
+                    <p className="text-white/80">{profileData.bio}</p>
                   </div>
                 </div>
               </div>
               
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="absolute top-4 right-4 bg-white hover:bg-gray-100"
-                onClick={() => setIsEditing(!isEditing)}
-              >
-                {isEditing ? "Cancel" : "Edit Profile"}
-              </Button>
+              {isCurrentUser && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="absolute top-4 right-4 bg-white hover:bg-gray-100"
+                  onClick={() => setIsEditing(!isEditing)}
+                >
+                  {isEditing ? "Cancel" : "Edit Profile"}
+                </Button>
+              )}
             </div>
           </div>
           
-          {isEditing ? (
+          {isCurrentUser && isEditing ? (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -233,20 +252,8 @@ const Profile = () => {
                   <input
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-studyhub-500"
-                    value={editedData.fullName}
-                    onChange={(e) => setEditedData({...editedData, fullName: e.target.value})}
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-studyhub-500"
-                    value={editedData.email}
-                    onChange={(e) => setEditedData({...editedData, email: e.target.value})}
+                    value={editedData.full_name}
+                    onChange={(e) => setEditedData({...editedData, full_name: e.target.value})}
                   />
                 </div>
                 
@@ -298,7 +305,7 @@ const Profile = () => {
                   <textarea
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-studyhub-500"
                     rows={3}
-                    value={editedData.bio}
+                    value={editedData.bio || ''}
                     onChange={(e) => setEditedData({...editedData, bio: e.target.value})}
                   />
                 </div>
@@ -308,8 +315,12 @@ const Profile = () => {
                 <Button variant="outline" onClick={() => setIsEditing(false)}>
                   Cancel
                 </Button>
-                <Button className="bg-studyhub-500 hover:bg-studyhub-600" onClick={handleSaveProfile}>
-                  Save Changes
+                <Button 
+                  className="bg-studyhub-500 hover:bg-studyhub-600" 
+                  onClick={handleSaveProfile}
+                  disabled={updateProfile.isPending || updateAvatar.isPending}
+                >
+                  {(updateProfile.isPending || updateAvatar.isPending) ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </motion.div>
@@ -318,38 +329,33 @@ const Profile = () => {
               <div className="md:col-span-2">
                 <Tabs defaultValue="notes">
                   <TabsList className="mb-6">
-                    <TabsTrigger value="notes" className="data-[state=active]:bg-studyhub-50 data-[state=active]:text-studyhub-700">My Notes</TabsTrigger>
-                    <TabsTrigger value="saved" className="data-[state=active]:bg-studyhub-50 data-[state=active]:text-studyhub-700">Saved</TabsTrigger>
-                    <TabsTrigger value="activity" className="data-[state=active]:bg-studyhub-50 data-[state=active]:text-studyhub-700">Activity</TabsTrigger>
+                    <TabsTrigger value="notes" className="data-[state=active]:bg-studyhub-50 data-[state=active]:text-studyhub-700">
+                      {isCurrentUser ? 'My Notes' : 'Notes'}
+                    </TabsTrigger>
+                    {isCurrentUser && (
+                      <TabsTrigger value="saved" className="data-[state=active]:bg-studyhub-50 data-[state=active]:text-studyhub-700">
+                        Saved
+                      </TabsTrigger>
+                    )}
                   </TabsList>
                   
                   <TabsContent value="notes" className="mt-0">
-                    {userNotes.length > 0 ? (
+                    {isNotesLoading ? (
+                      <div className="flex justify-center py-8">
+                        <Spinner />
+                      </div>
+                    ) : notesError ? (
+                      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 text-center">
+                        <p className="text-red-500">Error loading notes</p>
+                      </div>
+                    ) : userNotes && userNotes.length > 0 ? (
                       <div className="space-y-4">
                         {userNotes.map((note) => (
-                          <motion.div 
-                            key={note.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5"
-                          >
-                            <div className="flex justify-between">
-                              <div>
-                                <h3 className="font-semibold text-lg">{note.title}</h3>
-                                <p className="text-gray-600 dark:text-gray-400 text-sm">{note.course}</p>
-                                <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">{note.date}</p>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button variant="outline" size="sm" className="flex gap-1 items-center">
-                                  <FileText size={14} />
-                                  <span>{note.fileName}</span>
-                                </Button>
-                              </div>
-                            </div>
-                            
-                            <p className="text-gray-700 dark:text-gray-300 my-3 text-sm">{note.description}</p>
-                          </motion.div>
+                          <NoteCard 
+                            key={note.id} 
+                            note={note}
+                            showActions={isCurrentUser} 
+                          />
                         ))}
                       </div>
                     ) : (
@@ -357,114 +363,108 @@ const Profile = () => {
                         <div className="mb-4">
                           <FileText className="h-12 w-12 mx-auto text-gray-400" />
                         </div>
-                        <h3 className="text-lg font-medium mb-2">Upload your first note</h3>
-                        <p className="text-gray-500 dark:text-gray-400 mb-4">
-                          Share your study materials with classmates and help others excel
-                        </p>
-                        <Button 
-                          className="bg-studyhub-500 hover:bg-studyhub-600"
-                          onClick={() => navigate('/upload')}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Notes
-                        </Button>
+                        <h3 className="text-lg font-medium mb-2">No notes yet</h3>
+                        {isCurrentUser ? (
+                          <>
+                            <p className="text-gray-500 dark:text-gray-400 mb-4">
+                              Share your study materials with classmates and help others excel
+                            </p>
+                            <Button 
+                              className="bg-studyhub-500 hover:bg-studyhub-600"
+                              onClick={() => navigate('/upload')}
+                            >
+                              <Upload className="h-4 w-4 mr-2" />
+                              Upload Notes
+                            </Button>
+                          </>
+                        ) : (
+                          <p className="text-gray-500 dark:text-gray-400">
+                            This user hasn't uploaded any notes yet
+                          </p>
+                        )}
                       </div>
                     )}
                   </TabsContent>
                   
-                  <TabsContent value="saved">
-                    {savedNotes.length > 0 ? (
-                      <div className="space-y-4">
-                        {savedNotes.map((note) => (
-                          <motion.div 
-                            key={note.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5"
-                          >
-                            <div className="flex justify-between">
-                              <div>
-                                <h3 className="font-semibold text-lg">{note.title}</h3>
-                                <p className="text-gray-600 dark:text-gray-400 text-sm">{note.course}</p>
-                                <p className="text-gray-500 dark:text-gray-500 text-xs mt-1">{note.date}</p>
-                              </div>
-                              <div className="flex gap-2">
-                                <Button variant="outline" size="sm" className="flex gap-1 items-center">
-                                  <FileText size={14} />
-                                  <span>{note.fileName}</span>
-                                </Button>
-                              </div>
-                            </div>
-                            
-                            <p className="text-gray-700 dark:text-gray-300 my-3 text-sm">{note.description}</p>
-                          </motion.div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 text-center">
-                        <div className="mb-4">
-                          <Bookmark className="h-12 w-12 mx-auto text-gray-400" />
+                  {isCurrentUser && (
+                    <TabsContent value="saved">
+                      {isSavedNotesLoading ? (
+                        <div className="flex justify-center py-8">
+                          <Spinner />
                         </div>
-                        <h3 className="text-lg font-medium mb-2">No saved notes yet</h3>
-                        <p className="text-gray-500 dark:text-gray-400 mb-4">
-                          Browse study materials and save them for later
-                        </p>
-                        <Button 
-                          className="bg-studyhub-500 hover:bg-studyhub-600"
-                          onClick={() => navigate('/browse')}
-                        >
-                          Browse Materials
-                        </Button>
-                      </div>
-                    )}
-                  </TabsContent>
-                  
-                  <TabsContent value="activity">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 text-center">
-                      <div className="mb-4">
-                        <User className="h-12 w-12 mx-auto text-gray-400" />
-                      </div>
-                      <h3 className="text-lg font-medium mb-2">No recent activity</h3>
-                      <p className="text-gray-500 dark:text-gray-400 mb-4">
-                        Your activities will appear here
-                      </p>
-                    </div>
-                  </TabsContent>
+                      ) : savedNotesError ? (
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 text-center">
+                          <p className="text-red-500">Error loading saved notes</p>
+                        </div>
+                      ) : savedNotes && savedNotes.length > 0 ? (
+                        <div className="space-y-4">
+                          {savedNotes.map((saved) => (
+                            saved.note && (
+                              <NoteCard 
+                                key={saved.id} 
+                                note={saved.note}
+                                showActions={false} 
+                                showUnsave
+                                savedId={saved.id}
+                              />
+                            )
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 text-center">
+                          <div className="mb-4">
+                            <Image className="h-12 w-12 mx-auto text-gray-400" />
+                          </div>
+                          <h3 className="text-lg font-medium mb-2">No saved notes yet</h3>
+                          <p className="text-gray-500 dark:text-gray-400 mb-4">
+                            Browse study materials and save them for later
+                          </p>
+                          <Button 
+                            className="bg-studyhub-500 hover:bg-studyhub-600"
+                            onClick={() => navigate('/browse')}
+                          >
+                            Browse Materials
+                          </Button>
+                        </div>
+                      )}
+                    </TabsContent>
+                  )}
                 </Tabs>
               </div>
               
               <div className="space-y-8">
                 <Card className="p-6 dark:bg-gray-800">
-                  <h3 className="font-medium text-lg mb-4">Account Information</h3>
+                  <h3 className="font-medium text-lg mb-4">User Information</h3>
                   <div className="space-y-3 text-sm">
                     <div>
                       <span className="block text-gray-500 dark:text-gray-400">University</span>
-                      <span>{userData.university || 'Not specified'}</span>
+                      <span>{profileData.university || 'Not specified'}</span>
                     </div>
                     <div>
                       <span className="block text-gray-500 dark:text-gray-400">Course</span>
-                      <span>{userData.course || 'Not specified'}</span>
+                      <span>{profileData.course || 'Not specified'}</span>
                     </div>
                     <div>
                       <span className="block text-gray-500 dark:text-gray-400">Year</span>
-                      <span>{userData.year || 'Not specified'}</span>
+                      <span>{profileData.year || 'Not specified'}</span>
                     </div>
                     <div>
-                      <span className="block text-gray-500 dark:text-gray-400">Email</span>
-                      <span>{userData.email}</span>
+                      <span className="block text-gray-500 dark:text-gray-400">Joined</span>
+                      <span>{format(new Date(), 'MMM yyyy')}</span>
                     </div>
                   </div>
                 </Card>
                 
-                <Button 
-                  variant="outline" 
-                  className="w-full flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  onClick={handleLogout}
-                >
-                  <LogOut size={16} />
-                  <span>Logout</span>
-                </Button>
+                {isCurrentUser && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    onClick={handleLogout}
+                  >
+                    <LogOut size={16} />
+                    <span>Logout</span>
+                  </Button>
+                )}
               </div>
             </div>
           )}

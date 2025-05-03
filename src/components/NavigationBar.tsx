@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -111,7 +110,7 @@ const NavigationBar: React.FC = () => {
                     onClick={() => navigate('/profile')}
                   >
                     <User className="mr-2 h-4 w-4" />
-                    <span>View Profile</span>
+                    <span>My Profile</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     className="flex items-center dark:text-gray-300 dark:focus:bg-gray-700"
@@ -223,7 +222,7 @@ const NavigationBar: React.FC = () => {
                       onClick={toggleMobileMenu}
                     >
                       <User className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                      <span className="text-gray-900 dark:text-gray-100">View Profile</span>
+                      <span className="text-gray-900 dark:text-gray-100">My Profile</span>
                     </Link>
                     <Link 
                       to="/profile" 
