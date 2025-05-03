@@ -136,7 +136,9 @@ const ViewNote = () => {
           <Card className="p-6 bg-white dark:bg-gray-800 shadow-sm rounded-xl mb-8">
             <div className="flex items-center gap-3 mb-6">
               <div className="h-12 w-12 bg-studyhub-100 text-studyhub-600 dark:bg-studyhub-900 dark:text-studyhub-300 rounded-full flex items-center justify-center">
-                <span className="text-lg font-medium">{(note.profiles?.full_name || 'User').charAt(0)}</span>
+                <span className="text-lg font-medium">
+                  {(note.profiles?.full_name || 'User').charAt(0)}
+                </span>
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">

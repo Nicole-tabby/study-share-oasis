@@ -18,6 +18,10 @@ export interface Note {
   created_at: string;
   updated_at: string;
   public: boolean;
+  profiles?: {
+    full_name: string | null;
+    avatar_url: string | null;
+  } | null;
 }
 
 export const useNotes = () => {
@@ -31,7 +35,7 @@ export const useNotes = () => {
       queryFn: async () => {
         const { data, error } = await supabase
           .from('notes')
-          .select('*, profiles(full_name)')
+          .select('*, profiles(full_name, avatar_url)')
           .eq('public', true)
           .order('created_at', { ascending: false });
 
@@ -82,9 +86,13 @@ export const useNotes = () => {
       queryFn: async () => {
         if (!noteId) throw new Error('Note ID is required');
         
+        // Change the join query to explicitly select the fields we want from profiles
         const { data, error } = await supabase
           .from('notes')
-          .select('*, profiles(full_name)')
+          .select(`
+            *,
+            profiles:user_id(full_name, avatar_url)
+          `)
           .eq('id', noteId)
           .maybeSingle();
 
