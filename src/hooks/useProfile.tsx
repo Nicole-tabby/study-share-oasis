@@ -42,7 +42,16 @@ export const useProfile = () => {
           throw error;
         }
 
-        return data as ProfileData | null;
+        // Convert the retrieved data to match the ProfileData interface by adding any missing properties
+        return {
+          id: data?.id || userId,
+          full_name: data?.full_name || null,
+          avatar_url: data?.avatar_url || null,
+          bio: data?.bio || null,
+          university: data?.university || null,
+          course: data?.course || null,
+          year: data?.year || null
+        } as ProfileData;
       },
       enabled: !!userId,
     });

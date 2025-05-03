@@ -9,4 +9,13 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
+// @ts-ignore - Temporarily ignoring type issues with saved_notes table
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Helper type for saved notes since it's not in the auto-generated types
+export interface SavedNote {
+  id: string;
+  user_id: string;
+  note_id: string;
+  created_at: string;
+}

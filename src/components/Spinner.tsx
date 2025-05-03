@@ -17,3 +17,5 @@ export const Spinner: React.FC<SpinnerProps> = ({ size = 'md', className = '' })
     <div className={`${sizeClasses[size]} border-t-transparent rounded-full animate-spin border-studyhub-500 ${className}`}></div>
   );
 };
+
+export default Spinner;

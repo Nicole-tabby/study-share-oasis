@@ -1,14 +1,10 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SavedNote } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
 import { Note } from './useNotes';
 
-export interface SavedNote {
-  id: string;
-  user_id: string;
-  note_id: string;
-  created_at: string;
+export interface SavedNoteWithData extends SavedNote {
   note?: Note;
 }
 
@@ -24,6 +20,8 @@ export const useSavedNotes = () => {
         if (!userId) return [];
         
         // First, get the saved notes references
+        // Need to use @ts-ignore because the saved_notes table is not in the auto-generated types
+        // @ts-ignore
         const { data: savedNoteRefs, error: savedNotesError } = await supabase
           .from('saved_notes')
           .select('*')
@@ -44,7 +42,7 @@ export const useSavedNotes = () => {
         }
         
         // Extract note IDs
-        const noteIds = savedNoteRefs.map(ref => ref.note_id);
+        const noteIds = savedNoteRefs.map((ref: SavedNote) => ref.note_id);
         
         // Fetch the actual notes
         const { data: notesData, error: notesError } = await supabase
@@ -78,7 +76,7 @@ export const useSavedNotes = () => {
           }
           
           // Create a map of user_id to profile data for quick lookups
-          const profilesMap = (profilesData || []).reduce((map, profile) => {
+          const profilesMap = (profilesData || []).reduce((map: Record<string, any>, profile: any) => {
             map[profile.id] = profile;
             return map;
           }, {});
@@ -90,16 +88,18 @@ export const useSavedNotes = () => {
           }));
           
           // Combine saved note references with note data
-          return savedNoteRefs.map(savedRef => {
+          const result = savedNoteRefs.map((savedRef: SavedNote) => {
             const noteData = notesWithProfiles.find(note => note.id === savedRef.note_id);
             return {
               ...savedRef,
               note: noteData
             };
           });
+          
+          return result;
         }
         
-        return savedNoteRefs;
+        return savedNoteRefs.map((ref: SavedNote) => ({ ...ref, note: null }));
       },
       enabled: !!userId,
     });
@@ -110,6 +110,7 @@ export const useSavedNotes = () => {
     return useMutation({
       mutationFn: async ({ userId, noteId }: { userId: string; noteId: string }) => {
         // Check if the note is already saved
+        // @ts-ignore
         const { data: existingData, error: checkError } = await supabase
           .from('saved_notes')
           .select('*')
@@ -130,6 +131,7 @@ export const useSavedNotes = () => {
         }
         
         // Save the note
+        // @ts-ignore
         const { data, error } = await supabase
           .from('saved_notes')
           .insert({
@@ -156,6 +158,7 @@ export const useSavedNotes = () => {
       },
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries({ queryKey: ['savedNotes', variables.userId] });
+        queryClient.invalidateQueries({ queryKey: ['isNoteSaved', variables.userId, variables.noteId] });
       },
     });
   };
@@ -164,6 +167,7 @@ export const useSavedNotes = () => {
   const useUnsaveNote = () => {
     return useMutation({
       mutationFn: async ({ userId, noteId }: { userId: string; noteId: string }) => {
+        // @ts-ignore
         const { error } = await supabase
           .from('saved_notes')
           .delete()
@@ -187,6 +191,7 @@ export const useSavedNotes = () => {
       },
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries({ queryKey: ['savedNotes', variables.userId] });
+        queryClient.invalidateQueries({ queryKey: ['isNoteSaved', variables.userId, variables.noteId] });
       },
     });
   };
@@ -198,6 +203,7 @@ export const useSavedNotes = () => {
       queryFn: async () => {
         if (!userId || !noteId) return false;
         
+        // @ts-ignore
         const { data, error } = await supabase
           .from('saved_notes')
           .select('*')
