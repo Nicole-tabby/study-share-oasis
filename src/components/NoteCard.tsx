@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -50,10 +49,20 @@ const NoteCard: React.FC<NoteCardProps> = ({
     e.stopPropagation();
     
     if (!user) return;
-    await unsaveNote.mutateAsync({
-      userId: user.id,
-      noteId: note.id
-    });
+    
+    // If we have a savedId from props (used in ProfileSavedTab), use that
+    // Otherwise, use the noteId directly (used elsewhere)
+    if (savedId) {
+      await unsaveNote.mutateAsync({
+        userId: user.id,
+        noteId: savedId
+      });
+    } else {
+      await unsaveNote.mutateAsync({
+        userId: user.id,
+        noteId: note.id
+      });
+    }
   };
   
   return (
@@ -79,7 +88,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
             <Link to={`/profile/${note.user_id}`} className="flex items-center hover:underline group">
               <Avatar className="h-6 w-6 mr-2">
                 <AvatarImage 
-                  src={note.profiles?.avatar_url || `https://ui-avatars.com/api/?name=U&background=random`} 
+                  src={note.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(note.profiles?.full_name || 'U')}&background=random`} 
                   alt={note.profiles?.full_name || 'User'}
                 />
                 <AvatarFallback>{(note.profiles?.full_name?.[0] || 'U')}</AvatarFallback>

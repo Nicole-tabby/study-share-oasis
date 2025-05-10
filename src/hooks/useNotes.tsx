@@ -18,6 +18,7 @@ export interface Note {
   updated_at: string;
   public: boolean;
   profiles?: {
+    id?: string;
     full_name: string | null;
     avatar_url: string | null;
   } | null;
@@ -35,7 +36,14 @@ export const useNotes = () => {
         // First, fetch all public notes
         const { data: notesData, error: notesError } = await supabase
           .from('notes')
-          .select('*')
+          .select(`
+            *,
+            profiles:user_id (
+              id, 
+              full_name, 
+              avatar_url
+            )
+          `)
           .eq('public', true)
           .order('created_at', { ascending: false });
 
@@ -46,37 +54,6 @@ export const useNotes = () => {
             variant: 'destructive',
           });
           throw notesError;
-        }
-
-        // If we have notes, fetch their corresponding profile data
-        if (notesData && notesData.length > 0) {
-          // Get unique user IDs from notes
-          const userIds = [...new Set(notesData.map(note => note.user_id))];
-          
-          // Fetch all relevant profiles in one query
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url')
-            .in('id', userIds);
-            
-          if (profilesError) {
-            console.error('Error fetching profiles:', profilesError);
-            // Continue without profiles rather than failing completely
-          }
-          
-          // Create a map of user_id to profile data for quick lookups
-          const profilesMap = (profilesData || []).reduce((map, profile) => {
-            map[profile.id] = profile;
-            return map;
-          }, {});
-          
-          // Join notes with their profile data
-          const notesWithProfiles = notesData.map(note => ({
-            ...note,
-            profiles: profilesMap[note.user_id] || null
-          }));
-          
-          return notesWithProfiles;
         }
         
         return notesData || [];
@@ -93,7 +70,14 @@ export const useNotes = () => {
         
         const { data, error } = await supabase
           .from('notes')
-          .select('*')
+          .select(`
+            *,
+            profiles:user_id (
+              id, 
+              full_name, 
+              avatar_url
+            )
+          `)
           .eq('user_id', userId)
           .order('created_at', { ascending: false });
 
@@ -124,6 +108,7 @@ export const useNotes = () => {
           .select(`
             *,
             profiles:user_id (
+              id,
               full_name, 
               avatar_url
             )

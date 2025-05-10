@@ -2,7 +2,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Image } from 'lucide-react';
+import { BookmarkPlus } from 'lucide-react';
 import { Spinner } from '@/components/Spinner';
 import NoteCard from '@/components/NoteCard';
 import { SavedNoteWithData } from '@/hooks/useSavedNotes';
@@ -40,7 +40,7 @@ const ProfileSavedTab = ({
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 text-center">
         <div className="mb-4">
-          <Image className="h-12 w-12 mx-auto text-gray-400" />
+          <BookmarkPlus className="h-12 w-12 mx-auto text-gray-400" />
         </div>
         <h3 className="text-lg font-medium mb-2">No saved notes yet</h3>
         <p className="text-gray-500 dark:text-gray-400 mb-4">
@@ -64,7 +64,7 @@ const ProfileSavedTab = ({
             key={saved.id} 
             note={saved.note}
             showActions={false} 
-            showUnsave
+            showUnsave={true}
             savedId={saved.id}
           />
         )
