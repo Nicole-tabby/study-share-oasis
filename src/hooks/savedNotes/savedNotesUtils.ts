@@ -1,14 +1,6 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SavedNote } from '@/integrations/supabase/client';
 import { Note } from '@/hooks/useNotes';
-
-// Define the SavedNote interface
-export interface SavedNote {
-  id: string;
-  user_id: string;
-  note_id: string;
-  created_at: string;
-}
 
 // Define the SavedNoteWithData interface that includes the actual note data
 export interface SavedNoteWithData extends SavedNote {
@@ -19,8 +11,6 @@ export interface SavedNoteWithData extends SavedNote {
 export const fetchSavedNotes = async (userId: string) => {
   try {
     // First, get the saved notes references
-    // We need to use @ts-ignore because the saved_notes table isn't in the auto-generated types
-    // @ts-ignore - Type safety for saved_notes table
     const { data: savedNoteRefs, error: savedNotesError } = await supabase
       .from('saved_notes')
       .select('*')
@@ -36,8 +26,7 @@ export const fetchSavedNotes = async (userId: string) => {
     }
     
     // Extract note IDs from the saved references
-    // Cast savedNoteRefs to SavedNote[] to help TypeScript understand the structure
-    const noteIds = (savedNoteRefs as unknown as SavedNote[]).map((ref) => ref.note_id);
+    const noteIds = savedNoteRefs.map((ref) => ref.note_id);
     
     // Fetch the actual notes
     const { data: notesData, error: notesError } = await supabase
@@ -50,7 +39,7 @@ export const fetchSavedNotes = async (userId: string) => {
     }
     
     // Combine saved note references with note data
-    const result = (savedNoteRefs as unknown as SavedNote[]).map((savedRef) => {
+    const result = savedNoteRefs.map((savedRef) => {
       const noteData = notesData?.find(note => note.id === savedRef.note_id);
       return {
         ...savedRef,
@@ -67,7 +56,6 @@ export const fetchSavedNotes = async (userId: string) => {
 // Utility function to check if a note is saved by a user
 export const checkIfNoteSaved = async (userId: string, noteId: string) => {
   try {
-    // @ts-ignore - Type safety for saved_notes table
     const { data, error } = await supabase
       .from('saved_notes')
       .select('id')
@@ -96,7 +84,6 @@ export const saveNote = async (userId: string, noteId: string) => {
       return { data: existingData, error: null };
     }
     
-    // @ts-ignore - Type safety for saved_notes table
     const { data, error } = await supabase
       .from('saved_notes')
       .insert({ user_id: userId, note_id: noteId })
@@ -116,7 +103,6 @@ export const saveNote = async (userId: string, noteId: string) => {
 // Utility function to unsave a note for a user
 export const unsaveNote = async (userId: string, noteId: string) => {
   try {
-    // @ts-ignore - Type safety for saved_notes table
     const { error } = await supabase
       .from('saved_notes')
       .delete()
