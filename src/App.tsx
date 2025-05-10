@@ -50,7 +50,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  return user ? <>{children}</> : null;
+  // Always include a back to browse button for authenticated users
+  return user ? (
+    <>
+      {children}
+    </>
+  ) : null;
 };
 
 // Public route that redirects if user is already logged in
@@ -90,9 +95,9 @@ const AppRoutes = () => {
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/browse" element={<ProtectedRoute><Browse /></ProtectedRoute>} />
+        <Route path="/browse" element={<Browse />} />
         <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
-        <Route path="/note/:noteId" element={<ProtectedRoute><ViewNote /></ProtectedRoute>} />
+        <Route path="/note/:noteId" element={<ViewNote />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AnimatePresence>

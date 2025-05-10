@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import NavigationBar from '@/components/NavigationBar';
@@ -25,6 +24,7 @@ import {
 const ViewNote = () => {
   const { noteId } = useParams<{ noteId: string }>();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -39,7 +39,42 @@ const ViewNote = () => {
   const saveNote = useSaveNote();
   const unsaveNote = useUnsaveNote();
 
-  const handleDownload = () => {
+  // Generate download URL when note data is available
+  useEffect(() => {
+    const getDownloadUrl = async () => {
+      if (!note?.file_url) return;
+      
+      try {
+        // If the file_url contains a complete URL, use it directly
+        if (note.file_url.startsWith('http')) {
+          setDownloadUrl(note.file_url);
+        } else {
+          // Otherwise, get a signed URL from Supabase Storage
+          // This assumes the file_url contains the storage path
+          const { data, error } = await supabase.storage
+            .from('notes') // Replace with your actual bucket name
+            .createSignedUrl(note.file_url, 60 * 60); // 1 hour expiry
+            
+          if (error) {
+            console.error('Error getting download URL:', error);
+            return;
+          }
+          
+          if (data) {
+            setDownloadUrl(data.signedUrl);
+          }
+        }
+      } catch (err) {
+        console.error('Error processing download URL:', err);
+      }
+    };
+    
+    if (note) {
+      getDownloadUrl();
+    }
+  }, [note]);
+
+  const handleDownload = async () => {
     if (!note) return;
     
     incrementDownload.mutate(note.id);
@@ -49,14 +84,28 @@ const ViewNote = () => {
       description: "Your file download has started"
     });
     
-    // In a real app, this would download the actual file
-    // For this demo, we'll just simulate a download
-    setTimeout(() => {
+    // Create an anchor element and simulate click to download
+    if (downloadUrl) {
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = note.file_name || 'study-note';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => {
+        toast({
+          title: "Note downloaded",
+          description: `${note.file_name} has been downloaded successfully.`
+        });
+      }, 1500);
+    } else {
       toast({
-        title: "Note downloaded",
-        description: `${note.file_name} has been downloaded successfully.`
+        title: "Download failed",
+        description: "Unable to download the file. Please try again later.",
+        variant: "destructive"
       });
-    }, 1500);
+    }
   };
 
   const handleDeleteNote = async () => {
@@ -89,6 +138,13 @@ const ViewNote = () => {
   };
 
   const isOwner = user?.id === note?.user_id;
+
+  // Redirect to browse if not authenticated
+  useEffect(() => {
+    if (!user && !isLoading) {
+      navigate('/browse');
+    }
+  }, [user, isLoading, navigate]);
 
   if (isLoading) {
     return (
@@ -211,7 +267,7 @@ const ViewNote = () => {
                 <Button 
                   onClick={handleDownload} 
                   className="mt-auto bg-studyhub-500 hover:bg-studyhub-600"
-                  disabled={incrementDownload.isPending}
+                  disabled={incrementDownload.isPending || !downloadUrl}
                 >
                   {incrementDownload.isPending ? (
                     <>
@@ -225,37 +281,69 @@ const ViewNote = () => {
                     </>
                   )}
                 </Button>
+
+                {user && note && user.id !== note.user_id && (
+                  <div className="mt-4">
+                    {!isNoteSaved ? (
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center justify-center gap-2"
+                        onClick={handleSaveNote}
+                        disabled={saveNote.isPending || isCheckingSaved}
+                      >
+                        <BookmarkPlus size={16} />
+                        Save Note
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="w-full flex items-center justify-center gap-2"
+                        onClick={handleUnsaveNote}
+                        disabled={unsaveNote.isPending || isCheckingSaved}
+                      >
+                        <BookmarkX size={16} />
+                        Unsave Note
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
+            
+            {/* Document Preview Section */}
+            {downloadUrl && (
+              <div className="mt-8 border rounded-lg overflow-hidden">
+                <div className="bg-gray-100 dark:bg-gray-700 p-3 border-b border-gray-200 dark:border-gray-600">
+                  <h3 className="font-medium text-gray-700 dark:text-gray-300">Document Preview</h3>
+                </div>
+                <div className="h-[500px]">
+                  {downloadUrl.endsWith('.pdf') ? (
+                    <iframe 
+                      src={`${downloadUrl}#toolbar=0&navpanes=0`}
+                      className="w-full h-full" 
+                      title="PDF Preview" 
+                    />
+                  ) : downloadUrl.match(/\.(jpeg|jpg|gif|png)$/i) ? (
+                    <div className="flex items-center justify-center h-full p-4">
+                      <img 
+                        src={downloadUrl} 
+                        alt="Document Preview" 
+                        className="max-h-full max-w-full object-contain" 
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                      <FileText className="h-16 w-16 text-gray-300 mb-4" />
+                      <p className="text-gray-500 mb-2">Preview not available for this file type</p>
+                      <p className="text-sm text-gray-400">Download the file to view its contents</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       </main>
-      
-      {user && note && user.id !== note.user_id && (
-        <>
-          {!isNoteSaved ? (
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={handleSaveNote}
-              disabled={saveNote.isPending || isCheckingSaved}
-            >
-              <BookmarkPlus size={16} />
-              Save Note
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              className="flex items-center gap-2"
-              onClick={handleUnsaveNote}
-              disabled={unsaveNote.isPending || isCheckingSaved}
-            >
-              <BookmarkX size={16} />
-              Unsave Note
-            </Button>
-          )}
-        </>
-      )}
       
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,38 +8,62 @@ import { motion } from 'framer-motion';
 import { useToast } from "@/components/ui/use-toast";
 import { Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, loading } = useAuth();
+  const { signIn, loading, user } = useAuth();
   
   // Get the intended destination from location state or default to /browse
   const from = location.state?.from || '/browse';
   
+  // If user is already logged in, redirect them
+  useEffect(() => {
+    if (user) {
+      navigate(from);
+    }
+  }, [user, navigate, from]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     
     if (!email || !password) {
-      toast({
-        title: "All fields are required",
-        variant: "destructive",
-      });
+      setErrorMessage("Email and password are required");
       return;
     }
     
     setIsSubmitting(true);
-    const { error } = await signIn(email, password);
-    setIsSubmitting(false);
-    
-    if (error) {
-      // Reset password field on error to let user try again
-      setPassword('');
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (error) {
+        console.error("Login error:", error);
+        let friendlyMessage = "Invalid email or password. Please try again.";
+        
+        // Parse specific error messages
+        if (error.message.includes("Invalid login credentials")) {
+          friendlyMessage = "Invalid email or password. Please check your credentials and try again.";
+        } else if (error.message.includes("Email not confirmed")) {
+          friendlyMessage = "Your email has not been verified. Please check your inbox for a verification link.";
+        }
+        
+        setErrorMessage(friendlyMessage);
+        // Reset password field on error to let user try again
+        setPassword('');
+      }
+    } catch (err) {
+      console.error("Unexpected login error:", err);
+      setErrorMessage("Something went wrong. Please try again later.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -87,6 +111,12 @@ const Login = () => {
               <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
               <p className="text-gray-600">Sign in to your account</p>
             </div>
+            
+            {errorMessage && (
+              <Alert variant="destructive" className="mb-6">
+                <AlertDescription>{errorMessage}</AlertDescription>
+              </Alert>
+            )}
             
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">

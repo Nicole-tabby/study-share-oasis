@@ -89,7 +89,7 @@ const Index = () => {
               className="relative rounded-xl overflow-hidden shadow-xl"
             >
               <img 
-                src="/lovable-uploads/04a4f175-b3db-4f62-bb4f-c923d862a1d5.png" 
+                src="/lovable-uploads/2b56f43b-f3b9-4feb-acc7-529ae390f16e.png" 
                 alt="Study materials" 
                 className="w-full h-auto rounded-xl object-cover"
               />
