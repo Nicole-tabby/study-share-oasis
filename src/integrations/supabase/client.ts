@@ -44,6 +44,20 @@ type CustomDatabase = Database & {
       // ... other tables would be inherited from Database type
     };
   };
+  storage: {
+    Buckets: {
+      avatars: {
+        Row: {
+          id: string;
+          name: string;
+          owner: string | null;
+          created_at: string;
+          updated_at: string;
+          public: boolean;
+        };
+      };
+    };
+  };
 };
 
 // Create the client with our extended type
