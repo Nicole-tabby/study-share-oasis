@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,14 +45,13 @@ export const useProfile = () => {
         const profileData = data || {};
         
         return {
-          id: profileData.id || userId,
-          full_name: profileData.full_name || null,
-          avatar_url: profileData.avatar_url || null,
-          // Handle potentially missing fields (using type assertion)
-          bio: (profileData as any).bio || null,
-          university: (profileData as any).university || null,
-          course: (profileData as any).course || null,
-          year: (profileData as any).year || null
+          id: userId,
+          full_name: (profileData as any)?.full_name || null,
+          avatar_url: (profileData as any)?.avatar_url || null,
+          bio: (profileData as any)?.bio || null,
+          university: (profileData as any)?.university || null,
+          course: (profileData as any)?.course || null,
+          year: (profileData as any)?.year || null
         } as ProfileData;
       },
       enabled: !!userId,

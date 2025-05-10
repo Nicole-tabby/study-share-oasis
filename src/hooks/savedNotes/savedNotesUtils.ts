@@ -20,7 +20,7 @@ export const fetchSavedNotes = async (userId: string) => {
   try {
     // First, get the saved notes references
     // We need to use @ts-ignore because the saved_notes table isn't in the auto-generated types
-    // @ts-ignore
+    // @ts-ignore - Type safety for saved_notes table
     const { data: savedNoteRefs, error: savedNotesError } = await supabase
       .from('saved_notes')
       .select('*')
@@ -36,7 +36,8 @@ export const fetchSavedNotes = async (userId: string) => {
     }
     
     // Extract note IDs from the saved references
-    const noteIds = (savedNoteRefs as SavedNote[]).map((ref) => ref.note_id);
+    // Cast savedNoteRefs to SavedNote[] to help TypeScript understand the structure
+    const noteIds = (savedNoteRefs as unknown as SavedNote[]).map((ref) => ref.note_id);
     
     // Fetch the actual notes
     const { data: notesData, error: notesError } = await supabase
@@ -49,7 +50,7 @@ export const fetchSavedNotes = async (userId: string) => {
     }
     
     // Combine saved note references with note data
-    const result = (savedNoteRefs as SavedNote[]).map((savedRef) => {
+    const result = (savedNoteRefs as unknown as SavedNote[]).map((savedRef) => {
       const noteData = notesData?.find(note => note.id === savedRef.note_id);
       return {
         ...savedRef,
