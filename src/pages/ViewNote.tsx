@@ -216,18 +216,18 @@ const ViewNote = () => {
             <div className="flex items-center gap-3 mb-6">
               <div className="h-12 w-12 bg-studyhub-100 text-studyhub-600 dark:bg-studyhub-900 dark:text-studyhub-300 rounded-full flex items-center justify-center">
                 <span className="text-lg font-medium">
-                  {(note.profiles?.full_name || 'User').charAt(0)}
+                  {(note?.profiles?.full_name || 'User').charAt(0)}
                 </span>
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold dark:text-white">{note.title}</h2>
+                  <h2 className="text-xl font-semibold dark:text-white">{note?.title}</h2>
                   <Badge variant="outline" className="bg-studyhub-50 text-studyhub-700 border-studyhub-200 dark:bg-studyhub-900 dark:text-studyhub-300 dark:border-studyhub-800">
-                    <Eye className="mr-1 h-3 w-3" /> {note.public ? "Public Note" : "Private Note"}
+                    <Eye className="mr-1 h-3 w-3" /> {note?.public ? "Public Note" : "Private Note"}
                   </Badge>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Uploaded by {note.profiles?.full_name || 'User'} • {new Date(note.created_at).toLocaleDateString()}
+                  Uploaded by {note?.profiles?.full_name || 'User'} • {note ? new Date(note.created_at).toLocaleDateString() : ''}
                 </p>
               </div>
             </div>
@@ -236,17 +236,17 @@ const ViewNote = () => {
               <div className="md:col-span-2">
                 <h3 className="text-lg font-medium mb-2 dark:text-gray-200">Description</h3>
                 <p className="text-gray-700 dark:text-gray-300 mb-4">
-                  {note.description || "No description provided"}
+                  {note?.description || "No description provided"}
                 </p>
                 
                 <div className="grid grid-cols-2 gap-4 mb-6">
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Course</h4>
-                    <p className="dark:text-gray-200">{note.course}</p>
+                    <p className="dark:text-gray-200">{note?.course}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Semester</h4>
-                    <p className="dark:text-gray-200">{note.semester}</p>
+                    <p className="dark:text-gray-200">{note?.semester}</p>
                   </div>
                 </div>
               </div>
@@ -255,11 +255,11 @@ const ViewNote = () => {
                 <div className="flex items-center space-x-3 mb-4">
                   <FileText className="h-8 w-8 text-studyhub-500" />
                   <div>
-                    <p className="font-medium dark:text-gray-200">{note.file_name}</p>
+                    <p className="font-medium dark:text-gray-200">{note?.file_name}</p>
                     <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 space-x-3">
-                      <span>{note.downloads || 0} downloads</span>
+                      <span>{note?.downloads || 0} downloads</span>
                       <span>•</span>
-                      <span>{note.views || 1} views</span>
+                      <span>{note?.views || 1} views</span>
                     </div>
                   </div>
                 </div>

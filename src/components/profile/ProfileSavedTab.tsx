@@ -31,7 +31,7 @@ const ProfileSavedTab = ({
   if (savedNotesError) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 text-center">
-        <p className="text-red-500">Error loading saved notes</p>
+        <p className="text-red-500">Error loading saved notes: {savedNotesError.message}</p>
       </div>
     );
   }

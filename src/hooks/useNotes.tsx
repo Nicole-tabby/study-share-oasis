@@ -118,10 +118,16 @@ export const useNotes = () => {
       queryFn: async () => {
         if (!noteId) throw new Error('Note ID is required');
         
-        // Get the note first
+        // Get the note first with profile information
         const { data: noteData, error: noteError } = await supabase
           .from('notes')
-          .select('*')
+          .select(`
+            *,
+            profiles:user_id (
+              full_name, 
+              avatar_url
+            )
+          `)
           .eq('id', noteId)
           .maybeSingle();
 
@@ -138,31 +144,13 @@ export const useNotes = () => {
           throw new Error('Note not found');
         }
         
-        // Then get the profile data for the note's user_id
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('full_name, avatar_url')
-          .eq('id', noteData.user_id)
-          .maybeSingle();
-        
-        if (profileError) {
-          // Just log profile error but don't fail the whole request
-          console.error('Error fetching profile data:', profileError);
-        }
-
-        // Combine note and profile data
-        const noteWithProfile = {
-          ...noteData,
-          profiles: profileData || null
-        };
-
         // Increment view counter
         await supabase
           .from('notes')
           .update({ views: (noteData.views || 0) + 1 })
           .eq('id', noteId);
 
-        return noteWithProfile;
+        return noteData;
       },
       enabled: !!noteId,
     });

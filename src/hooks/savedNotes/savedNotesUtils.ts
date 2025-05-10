@@ -28,10 +28,17 @@ export const fetchSavedNotes = async (userId: string) => {
     // Extract note IDs from the saved references
     const noteIds = savedNoteRefs.map((ref) => ref.note_id);
     
-    // Fetch the actual notes
+    // Fetch the actual notes with profile data
     const { data: notesData, error: notesError } = await supabase
       .from('notes')
-      .select('*, profiles:user_id(*)')
+      .select(`
+        *,
+        profiles:user_id (
+          id,
+          full_name,
+          avatar_url
+        )
+      `)
       .in('id', noteIds);
       
     if (notesError) {
@@ -86,7 +93,10 @@ export const saveNote = async (userId: string, noteId: string) => {
     
     const { data, error } = await supabase
       .from('saved_notes')
-      .insert({ user_id: userId, note_id: noteId })
+      .insert({ 
+        user_id: userId, 
+        note_id: noteId 
+      })
       .select()
       .single();
       

@@ -89,8 +89,8 @@ const Index = () => {
               className="relative rounded-xl overflow-hidden shadow-xl"
             >
               <img 
-                src="/lovable-uploads/2b56f43b-f3b9-4feb-acc7-529ae390f16e.png" 
-                alt="Study materials" 
+                src="https://images.unsplash.com/photo-1498050108023-c5249f4df085" 
+                alt="Study materials on desk" 
                 className="w-full h-auto rounded-xl object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-tr from-studyhub-800/20 to-transparent rounded-xl"></div>
@@ -108,15 +108,18 @@ const Index = () => {
               {[
                 {
                   title: "Easy Note Sharing",
-                  description: "Upload and share your study materials with classmates in seconds"
+                  description: "Upload and share your study materials with classmates in seconds",
+                  image: "https://images.unsplash.com/photo-1473091534298-04dcbce3278c"
                 },
                 {
                   title: "Find What You Need",
-                  description: "Search for notes by course, semester, or year to find exactly what you need"
+                  description: "Search for notes by course, semester, or year to find exactly what you need",
+                  image: null
                 },
                 {
                   title: "Build Your Network",
-                  description: "Connect with other students in your courses and collaborate effectively"
+                  description: "Connect with other students in your courses and collaborate effectively",
+                  image: null
                 }
               ].map((feature, i) => (
                 <motion.div 
@@ -129,6 +132,15 @@ const Index = () => {
                   <div className="w-12 h-12 rounded-full bg-studyhub-100 text-studyhub-600 flex items-center justify-center mb-4 mx-auto">
                     {i + 1}
                   </div>
+                  {feature.image && (
+                    <div className="h-32 mb-4 overflow-hidden rounded-lg">
+                      <img 
+                        src={feature.image} 
+                        alt={feature.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
                   <h3 className="font-bold text-lg mb-2">{feature.title}</h3>
                   <p className="text-gray-600">{feature.description}</p>
                 </motion.div>

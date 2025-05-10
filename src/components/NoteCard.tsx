@@ -24,16 +24,20 @@ const NoteCard: React.FC<NoteCardProps> = ({
   savedId,
 }) => {
   const { user } = useAuth();
-  const { useSaveNote, useUnsaveNote } = useSavedNotes();
+  const { useSaveNote, useUnsaveNote, useIsNoteSaved } = useSavedNotes();
   const saveNote = useSaveNote();
   const unsaveNote = useUnsaveNote();
+  const { data: isNoteSaved } = useIsNoteSaved(user?.id, note.id);
   
   // Format the date
   const formattedDate = note.created_at ? 
     format(parseISO(note.created_at), 'MMM dd, yyyy') : 
     'Unknown date';
   
-  const handleSave = async () => {
+  const handleSave = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!user) return;
     await saveNote.mutateAsync({
       userId: user.id,
@@ -41,7 +45,10 @@ const NoteCard: React.FC<NoteCardProps> = ({
     });
   };
   
-  const handleUnsave = async () => {
+  const handleUnsave = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (!user) return;
     await unsaveNote.mutateAsync({
       userId: user.id,
@@ -73,6 +80,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
               <Avatar className="h-6 w-6 mr-2">
                 <AvatarImage 
                   src={note.profiles?.avatar_url || `https://ui-avatars.com/api/?name=U&background=random`} 
+                  alt={note.profiles?.full_name || 'User'}
                 />
                 <AvatarFallback>{(note.profiles?.full_name?.[0] || 'U')}</AvatarFallback>
               </Avatar>
@@ -93,7 +101,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
               </Link>
             </Button>
             
-            {user && user.id !== note.user_id && !showUnsave && (
+            {user && user.id !== note.user_id && !showUnsave && !isNoteSaved && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -106,7 +114,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
               </Button>
             )}
             
-            {showUnsave && (
+            {(showUnsave || isNoteSaved) && user?.id !== note.user_id && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -119,7 +127,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
               </Button>
             )}
             
-            {showActions && (
+            {showActions && user?.id === note.user_id && (
               <Button 
                 variant="outline" 
                 size="sm" 
