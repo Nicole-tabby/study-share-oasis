@@ -22,6 +22,13 @@ const Profile = () => {
   const { user, loading: authLoading, signOut } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState({
+    full_name: '',
+    bio: '',
+    university: '',
+    course: '',
+    year: ''
+  });
   
   // Get profile hooks
   const { useUserProfile, useUpdateProfile, useUpdateAvatar } = useProfile();
@@ -56,6 +63,19 @@ const Profile = () => {
     isLoading: isSavedNotesLoading, 
     error: savedNotesError 
   } = useGetSavedNotes(user?.id);
+
+  // Initialize editedData when profile data is loaded
+  useEffect(() => {
+    if (profileData) {
+      setEditedData({
+        full_name: profileData.full_name || '',
+        bio: profileData.bio || '',
+        university: profileData.university || '',
+        course: profileData.course || '',
+        year: profileData.year || ''
+      });
+    }
+  }, [profileData]);
   
   // Determine if profile belongs to current user
   const isCurrentUser = user?.id === targetUserId;
@@ -114,8 +134,10 @@ const Profile = () => {
     }
   };
   
-  const handleAvatarUpdate = async (file: File) => {
-    if (!user) return;
+  const handleAvatarUpdate = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user || !e.target.files || e.target.files.length === 0) return;
+    
+    const file = e.target.files[0];
     
     try {
       toast({
@@ -166,22 +188,10 @@ const Profile = () => {
       <div className="container px-4 py-8 mx-auto max-w-5xl">
         {isEditing ? (
           <ProfileEditForm
-            editedData={{
-              full_name: profileData.full_name || '',
-              bio: profileData.bio || '',
-              university: profileData.university || '',
-              course: profileData.course || '',
-              year: profileData.year || ''
-            }}
-            setEditedData={() => {}}
+            editedData={editedData}
+            setEditedData={setEditedData}
             setIsEditing={setIsEditing}
-            handleSaveProfile={() => handleProfileUpdate({
-              full_name: profileData.full_name,
-              bio: profileData.bio,
-              university: profileData.university,
-              course: profileData.course,
-              year: profileData.year
-            })}
+            handleSaveProfile={() => handleProfileUpdate(editedData)}
             isPending={updateProfile.isPending}
           />
         ) : (
@@ -189,10 +199,10 @@ const Profile = () => {
             <ProfileHeader
               profileData={profileData}
               isCurrentUser={isCurrentUser}
-              isEditing={false}
+              isEditing={isEditing}
               setIsEditing={setIsEditing}
               avatarUrl={profileData.avatar_url || ''}
-              handleAvatarChange={() => {}}
+              handleAvatarChange={handleAvatarUpdate}
             />
             
             <div className="mt-8">
