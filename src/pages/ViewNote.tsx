@@ -48,26 +48,28 @@ const ViewNote = () => {
         // If the file_url contains a complete URL, use it directly
         if (note.file_url.startsWith('http')) {
           setDownloadUrl(note.file_url);
-        } else {
-          // Otherwise, get a signed URL from Supabase Storage
-          // This assumes the file_url contains the storage path
-          const { data, error } = await supabase.storage
-            .from('notes') 
-            .createSignedUrl(note.file_url, 60 * 60); // 1 hour expiry
-            
-          if (error) {
-            console.error('Error getting download URL:', error);
-            toast({
-              title: "Error accessing file",
-              description: "There was a problem accessing this note.",
-              variant: "destructive"
-            });
-            return;
-          }
+          return;
+        } 
+        
+        // Otherwise, get a signed URL from Supabase Storage
+        // Access the notes bucket directly
+        const { data, error } = await supabase.storage
+          .from('notes')
+          .createSignedUrl(note.file_url, 60 * 60); // 1 hour expiry
           
-          if (data) {
-            setDownloadUrl(data.signedUrl);
-          }
+        if (error) {
+          console.error('Error getting download URL:', error);
+          toast({
+            title: "Error accessing file",
+            description: "There was a problem accessing this note: " + error.message,
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        if (data) {
+          console.log("Successfully generated signed URL:", data.signedUrl);
+          setDownloadUrl(data.signedUrl);
         }
       } catch (err) {
         console.error('Error processing download URL:', err);

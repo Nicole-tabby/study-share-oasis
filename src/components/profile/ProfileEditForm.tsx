@@ -84,6 +84,7 @@ const ProfileEditForm = ({
             value={editedData.year}
             onChange={(e) => setEditedData({...editedData, year: e.target.value})}
           >
+            <option value="">Select Year</option>
             <option value="Freshman">Freshman</option>
             <option value="Sophomore">Sophomore</option>
             <option value="Junior">Junior</option>

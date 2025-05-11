@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
@@ -41,8 +41,8 @@ const ProfileHeader = ({
               <AvatarFallback>{(profileData.full_name || 'User').charAt(0)}</AvatarFallback>
             </Avatar>
             
-            {isCurrentUser && isEditing && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer">
+            {isCurrentUser && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
                 <label htmlFor="avatar-upload" className="cursor-pointer">
                   <Edit className="h-6 w-6 text-white" />
                   <span className="sr-only">Upload profile picture</span>
