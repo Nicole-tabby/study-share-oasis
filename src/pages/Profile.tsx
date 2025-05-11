@@ -19,7 +19,7 @@ import ProfileError from '@/components/profile/ProfileError';
 const Profile = () => {
   const { userId: profileUserId } = useParams<{ userId?: string }>();
   const navigate = useNavigate();
-  const { user, loading: authLoading, logout } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   
@@ -73,7 +73,7 @@ const Profile = () => {
   
   const handleLogout = async () => {
     try {
-      await logout();
+      await signOut();
       toast({
         title: "Logged out successfully",
       });
@@ -153,7 +153,7 @@ const Profile = () => {
       
     return (
       <ProfileError 
-        message={errorMessage}
+        error={{ message: errorMessage }}
         onRetry={() => refetchProfile()}
       />
     );
@@ -166,18 +166,33 @@ const Profile = () => {
       <div className="container px-4 py-8 mx-auto max-w-5xl">
         {isEditing ? (
           <ProfileEditForm
-            profileData={profileData}
-            onSave={handleProfileUpdate}
-            onCancel={() => setIsEditing(false)}
-            onAvatarUpdate={handleAvatarUpdate}
-            isUpdating={updateProfile.isPending}
+            editedData={{
+              full_name: profileData.full_name || '',
+              bio: profileData.bio || '',
+              university: profileData.university || '',
+              course: profileData.course || '',
+              year: profileData.year || ''
+            }}
+            setEditedData={() => {}}
+            setIsEditing={setIsEditing}
+            handleSaveProfile={() => handleProfileUpdate({
+              full_name: profileData.full_name,
+              bio: profileData.bio,
+              university: profileData.university,
+              course: profileData.course,
+              year: profileData.year
+            })}
+            isPending={updateProfile.isPending}
           />
         ) : (
           <>
             <ProfileHeader
               profileData={profileData}
               isCurrentUser={isCurrentUser}
-              onEdit={() => setIsEditing(true)}
+              isEditing={false}
+              setIsEditing={setIsEditing}
+              avatarUrl={profileData.avatar_url || ''}
+              handleAvatarChange={() => {}}
             />
             
             <div className="mt-8">

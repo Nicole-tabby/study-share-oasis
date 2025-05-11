@@ -5,10 +5,11 @@ import NavigationBar from '@/components/NavigationBar';
 import { Button } from "@/components/ui/button";
 
 interface ProfileErrorProps {
-  error?: Error;
+  error?: { message: string };
+  onRetry?: () => void;
 }
 
-const ProfileError = ({ error }: ProfileErrorProps) => {
+const ProfileError = ({ error, onRetry }: ProfileErrorProps) => {
   const navigate = useNavigate();
   
   return (
@@ -20,9 +21,16 @@ const ProfileError = ({ error }: ProfileErrorProps) => {
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             {error ? error.message : 'Could not find the requested profile'}
           </p>
-          <Button onClick={() => navigate('/browse')}>
-            Go to Browse
-          </Button>
+          <div className="space-x-4">
+            {onRetry && (
+              <Button onClick={onRetry} className="bg-studyhub-500 hover:bg-studyhub-600">
+                Retry
+              </Button>
+            )}
+            <Button onClick={() => navigate('/browse')} variant="outline">
+              Go to Browse
+            </Button>
+          </div>
         </div>
       </div>
     </div>
