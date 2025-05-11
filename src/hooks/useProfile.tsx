@@ -63,30 +63,40 @@ export const useProfile = () => {
       mutationFn: async (profileData: Partial<ProfileData> & { id: string }) => {
         const { id, ...updateData } = profileData;
         
-        const { data, error } = await supabase
-          .from('profiles')
-          .update({
-            ...updateData,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', id)
-          .select()
-          .single();
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .update({
+              ...updateData,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', id)
+            .select();
 
-        if (error) {
+          if (error) {
+            console.error('Supabase update profile error:', error);
+            toast({
+              title: 'Failed to update profile',
+              description: error.message,
+              variant: 'destructive',
+            });
+            throw error;
+          }
+
+          toast({
+            title: 'Profile updated successfully',
+          });
+
+          return data[0];
+        } catch (error) {
+          console.error('Profile update error:', error);
           toast({
             title: 'Failed to update profile',
-            description: error.message,
+            description: error instanceof Error ? error.message : 'Unknown error occurred',
             variant: 'destructive',
           });
           throw error;
         }
-
-        toast({
-          title: 'Profile updated successfully',
-        });
-
-        return data;
       },
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries({ queryKey: ['profile', variables.id] });
@@ -102,60 +112,70 @@ export const useProfile = () => {
         const fileExt = file.name.split('.').pop();
         const filePath = `${userId}/avatar.${fileExt}`;
         
-        // Upload to storage
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, file, { upsert: true });
-        
-        if (uploadError) {
+        try {
+          // Upload to storage
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file, { upsert: true });
+          
+          if (uploadError) {
+            console.error('Avatar upload error:', uploadError);
+            toast({
+              title: 'Avatar upload failed',
+              description: uploadError.message,
+              variant: 'destructive',
+            });
+            throw uploadError;
+          }
+          
+          // Step 2: Get the public URL
+          const { data: publicURL } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+          
+          if (!publicURL) {
+            const error = new Error('Failed to get public URL for avatar');
+            toast({
+              title: 'Avatar update failed',
+              description: error.message,
+              variant: 'destructive',
+            });
+            throw error;
+          }
+          
+          // Step 3: Update the profile with the new avatar URL
+          const { data, error: updateError } = await supabase
+            .from('profiles')
+            .update({ 
+              avatar_url: publicURL.publicUrl,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', userId)
+            .select();
+          
+          if (updateError) {
+            toast({
+              title: 'Failed to update profile with new avatar',
+              description: updateError.message,
+              variant: 'destructive',
+            });
+            throw updateError;
+          }
+          
           toast({
-            title: 'Avatar upload failed',
-            description: uploadError.message,
-            variant: 'destructive',
+            title: 'Avatar updated successfully',
           });
-          throw uploadError;
-        }
-        
-        // Step 2: Get the public URL
-        const { data: publicURL } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(filePath);
-        
-        if (!publicURL) {
-          const error = new Error('Failed to get public URL for avatar');
+          
+          return data[0];
+        } catch (error) {
+          console.error('Avatar update error:', error);
           toast({
             title: 'Avatar update failed',
-            description: error.message,
+            description: error instanceof Error ? error.message : 'Unknown error occurred',
             variant: 'destructive',
           });
           throw error;
         }
-        
-        // Step 3: Update the profile with the new avatar URL
-        const { data, error: updateError } = await supabase
-          .from('profiles')
-          .update({ 
-            avatar_url: publicURL.publicUrl,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId)
-          .select()
-          .single();
-        
-        if (updateError) {
-          toast({
-            title: 'Failed to update profile with new avatar',
-            description: updateError.message,
-            variant: 'destructive',
-          });
-          throw updateError;
-        }
-        
-        toast({
-          title: 'Avatar updated successfully',
-        });
-        
-        return data;
       },
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries({ queryKey: ['profile', variables.userId] });

@@ -6,6 +6,7 @@ import { BookmarkPlus } from 'lucide-react';
 import { Spinner } from '@/components/Spinner';
 import NoteCard from '@/components/NoteCard';
 import { SavedNoteWithData } from '@/hooks/useSavedNotes';
+import { useToast } from '@/components/ui/use-toast';
 
 interface ProfileSavedTabProps {
   isSavedNotesLoading: boolean;
@@ -19,6 +20,7 @@ const ProfileSavedTab = ({
   savedNotes 
 }: ProfileSavedTabProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
   
   if (isSavedNotesLoading) {
     return (
@@ -32,6 +34,12 @@ const ProfileSavedTab = ({
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 text-center">
         <p className="text-red-500">Error loading saved notes: {savedNotesError.message}</p>
+        <Button 
+          className="mt-4 bg-studyhub-500 hover:bg-studyhub-600"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </Button>
       </div>
     );
   }
@@ -58,7 +66,7 @@ const ProfileSavedTab = ({
   
   return (
     <div className="space-y-4">
-      {savedNotes.map((saved) => (
+      {savedNotes.filter(saved => saved.note).map((saved) => (
         saved.note && (
           <NoteCard 
             key={saved.id} 

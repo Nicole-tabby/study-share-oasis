@@ -8,6 +8,7 @@ import { Note } from '@/hooks/useNotes';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSavedNotes } from '@/hooks/useSavedNotes';
 import { format, parseISO } from 'date-fns';
+import { useToast } from '@/components/ui/use-toast';
 
 interface NoteCardProps {
   note: Note;
@@ -23,6 +24,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
   savedId,
 }) => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const { useSaveNote, useUnsaveNote, useIsNoteSaved } = useSavedNotes();
   const saveNote = useSaveNote();
   const unsaveNote = useUnsaveNote();
@@ -37,30 +39,67 @@ const NoteCard: React.FC<NoteCardProps> = ({
     e.preventDefault();
     e.stopPropagation();
     
-    if (!user) return;
-    await saveNote.mutateAsync({
-      userId: user.id,
-      noteId: note.id
-    });
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to save notes",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      await saveNote.mutateAsync({
+        userId: user.id,
+        noteId: note.id
+      });
+      
+      toast({
+        title: "Note saved successfully",
+        description: "You can find it in your saved notes",
+      });
+    } catch (error) {
+      console.error("Error saving note:", error);
+      toast({
+        title: "Failed to save note",
+        description: "Please try again later",
+        variant: "destructive"
+      });
+    }
   };
   
   const handleUnsave = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (!user) return;
+    if (!user) {
+      return;
+    }
     
-    // If we have a savedId from props (used in ProfileSavedTab), use that
-    // Otherwise, use the noteId directly (used elsewhere)
-    if (savedId) {
-      await unsaveNote.mutateAsync({
-        userId: user.id,
-        noteId: savedId
+    try {
+      // If we have a savedId from props (used in ProfileSavedTab), use that
+      // Otherwise, use the noteId directly (used elsewhere)
+      if (savedId) {
+        await unsaveNote.mutateAsync({
+          userId: user.id,
+          noteId: savedId
+        });
+      } else {
+        await unsaveNote.mutateAsync({
+          userId: user.id,
+          noteId: note.id
+        });
+      }
+      
+      toast({
+        title: "Note removed from saved",
       });
-    } else {
-      await unsaveNote.mutateAsync({
-        userId: user.id,
-        noteId: note.id
+    } catch (error) {
+      console.error("Error removing saved note:", error);
+      toast({
+        title: "Failed to remove saved note",
+        description: "Please try again later",
+        variant: "destructive"
       });
     }
   };

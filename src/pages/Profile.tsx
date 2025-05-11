@@ -78,6 +78,17 @@ const Profile = () => {
     }
   }, [profileData]);
   
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!user && !isProfileLoading) {
+      navigate('/login');
+      toast({
+        title: "Authentication required",
+        description: "Please login to view profiles"
+      });
+    }
+  }, [user, isProfileLoading, navigate, toast]);
+  
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
@@ -95,7 +106,14 @@ const Profile = () => {
   };
   
   const handleSaveProfile = async () => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to update your profile",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
       // Update profile data
@@ -110,15 +128,30 @@ const Profile = () => {
       
       // Handle avatar upload if there is a new avatar
       if (avatarFile) {
-        await updateAvatar.mutateAsync({
-          file: avatarFile,
-          userId: user.id
-        });
+        try {
+          await updateAvatar.mutateAsync({
+            file: avatarFile,
+            userId: user.id
+          });
+        } catch (avatarError) {
+          console.error('Error updating avatar:', avatarError);
+          // Continue with profile update even if avatar update fails
+          toast({
+            title: "Profile updated but avatar failed",
+            description: "Your profile was updated but there was an issue with the avatar upload",
+            variant: "warning"
+          });
+        }
       }
       
       setIsEditing(false);
     } catch (error) {
       console.error('Error updating profile:', error);
+      toast({
+        title: "Failed to update profile",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive"
+      });
     }
   };
   

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -52,11 +53,16 @@ const ViewNote = () => {
           // Otherwise, get a signed URL from Supabase Storage
           // This assumes the file_url contains the storage path
           const { data, error } = await supabase.storage
-            .from('notes') // Replace with your actual bucket name
+            .from('notes') 
             .createSignedUrl(note.file_url, 60 * 60); // 1 hour expiry
             
           if (error) {
             console.error('Error getting download URL:', error);
+            toast({
+              title: "Error accessing file",
+              description: "There was a problem accessing this note.",
+              variant: "destructive"
+            });
             return;
           }
           
@@ -66,13 +72,18 @@ const ViewNote = () => {
         }
       } catch (err) {
         console.error('Error processing download URL:', err);
+        toast({
+          title: "Error accessing file",
+          description: "There was a problem accessing this note.",
+          variant: "destructive"
+        });
       }
     };
     
     if (note) {
       getDownloadUrl();
     }
-  }, [note]);
+  }, [note, toast]);
 
   const handleDownload = async () => {
     if (!note) return;
@@ -139,12 +150,16 @@ const ViewNote = () => {
 
   const isOwner = user?.id === note?.user_id;
 
-  // Redirect to browse if not authenticated
+  // Redirect to login if not authenticated
   useEffect(() => {
     if (!user && !isLoading) {
-      navigate('/browse');
+      navigate('/login');
+      toast({
+        title: "Authentication required",
+        description: "Please login to view notes"
+      });
     }
-  }, [user, isLoading, navigate]);
+  }, [user, isLoading, navigate, toast]);
 
   if (isLoading) {
     return (
@@ -216,7 +231,7 @@ const ViewNote = () => {
             <div className="flex items-center gap-3 mb-6">
               <div className="h-12 w-12 bg-studyhub-100 text-studyhub-600 dark:bg-studyhub-900 dark:text-studyhub-300 rounded-full flex items-center justify-center">
                 <span className="text-lg font-medium">
-                  {(note?.profiles?.full_name || 'User').charAt(0)}
+                  {(note?.profiles?.full_name || 'User').charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="flex-1">
@@ -322,6 +337,7 @@ const ViewNote = () => {
                       src={`${downloadUrl}#toolbar=0&navpanes=0`}
                       className="w-full h-full" 
                       title="PDF Preview" 
+                      sandbox="allow-same-origin allow-scripts"
                     />
                   ) : downloadUrl.match(/\.(jpeg|jpg|gif|png)$/i) ? (
                     <div className="flex items-center justify-center h-full p-4">
