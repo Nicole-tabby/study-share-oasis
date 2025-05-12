@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -117,6 +118,7 @@ export const useNotes = () => {
           .maybeSingle();
 
         if (noteError) {
+          console.error("Error fetching note:", noteError);
           toast({
             title: 'Error fetching note',
             description: noteError.message,
@@ -130,10 +132,15 @@ export const useNotes = () => {
         }
         
         // Increment view counter
-        await supabase
-          .from('notes')
-          .update({ views: (noteData.views || 0) + 1 })
-          .eq('id', noteId);
+        try {
+          await supabase
+            .from('notes')
+            .update({ views: (noteData.views || 0) + 1 })
+            .eq('id', noteId);
+        } catch (updateError) {
+          console.error("Error updating view count:", updateError);
+          // Don't throw error here, as we still want to return the note data
+        }
 
         return noteData;
       },
@@ -243,30 +250,37 @@ export const useNotes = () => {
   const useIncrementDownload = () => {
     return useMutation({
       mutationFn: async (noteId: string) => {
-        // First, get the current count
-        const { data: note, error: fetchError } = await supabase
-          .from('notes')
-          .select('downloads')
-          .eq('id', noteId)
-          .single();
+        try {
+          // First, get the current count
+          const { data: note, error: fetchError } = await supabase
+            .from('notes')
+            .select('downloads')
+            .eq('id', noteId)
+            .single();
 
-        if (fetchError) {
-          throw fetchError;
+          if (fetchError) {
+            console.error("Error fetching download count:", fetchError);
+            throw fetchError;
+          }
+
+          // Then increment it
+          const { data, error: updateError } = await supabase
+            .from('notes')
+            .update({ downloads: (note?.downloads || 0) + 1 })
+            .eq('id', noteId)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error("Error updating download count:", updateError);
+            throw updateError;
+          }
+
+          return data;
+        } catch (error) {
+          console.error("Error in increment download mutation:", error);
+          throw error;
         }
-
-        // Then increment it
-        const { data, error: updateError } = await supabase
-          .from('notes')
-          .update({ downloads: (note?.downloads || 0) + 1 })
-          .eq('id', noteId)
-          .select()
-          .single();
-
-        if (updateError) {
-          throw updateError;
-        }
-
-        return data;
       },
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries({ queryKey: ['note', variables] });

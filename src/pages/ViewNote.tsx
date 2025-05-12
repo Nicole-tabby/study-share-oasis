@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -45,20 +46,19 @@ const ViewNote = () => {
       if (!note?.file_url) return;
       
       try {
-        // If the file_url contains a complete URL, use it directly
+        // Check if file_url is already a complete URL
         if (note.file_url.startsWith('http')) {
           setDownloadUrl(note.file_url);
           return;
-        } 
+        }
         
-        // Otherwise, get a signed URL from Supabase Storage
-        // Access the notes bucket directly
+        // Get a signed URL from storage for the file
         const { data, error } = await supabase.storage
           .from('notes')
           .createSignedUrl(note.file_url, 60 * 60); // 1 hour expiry
           
         if (error) {
-          console.error('Error getting download URL:', error);
+          console.error('Error creating signed URL:', error);
           toast({
             title: "Error accessing file",
             description: "There was a problem accessing this note: " + error.message,
@@ -67,8 +67,8 @@ const ViewNote = () => {
           return;
         }
         
-        if (data) {
-          console.log("Successfully generated signed URL:", data.signedUrl);
+        if (data?.signedUrl) {
+          console.log("Successfully created signed URL:", data.signedUrl);
           setDownloadUrl(data.signedUrl);
         }
       } catch (err) {
@@ -89,18 +89,30 @@ const ViewNote = () => {
   const handleDownload = async () => {
     if (!note) return;
     
-    incrementDownload.mutate(note.id);
-    
-    toast({
-      title: "Download started",
-      description: "Your file download has started"
-    });
-    
-    // Create an anchor element and simulate click to download
-    if (downloadUrl) {
+    try {
+      // Increment the download counter
+      await incrementDownload.mutateAsync(note.id);
+      
+      // Ensure we have a valid download URL
+      if (!downloadUrl) {
+        toast({
+          title: "Download failed",
+          description: "Unable to generate download link. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      toast({
+        title: "Download started",
+        description: "Your file download has started"
+      });
+      
+      // Create an anchor element and simulate click to download
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = note.file_name || 'study-note';
+      link.target = '_blank'; // Open in new tab to handle potential cross-origin issues
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -111,7 +123,8 @@ const ViewNote = () => {
           description: `${note.file_name} has been downloaded successfully.`
         });
       }, 1500);
-    } else {
+    } catch (error) {
+      console.error("Download error:", error);
       toast({
         title: "Download failed",
         description: "Unable to download the file. Please try again later.",
@@ -151,16 +164,16 @@ const ViewNote = () => {
 
   const isOwner = user?.id === note?.user_id;
 
-  // Redirect to login if not authenticated
+  // Only redirect to login if accessing private notes without authentication
   useEffect(() => {
-    if (!user && !isLoading) {
+    if (!isLoading && !user && note && note.public === false) {
       navigate('/login');
       toast({
         title: "Authentication required",
-        description: "Please login to view notes"
+        description: "Please login to view private notes"
       });
     }
-  }, [user, isLoading, navigate, toast]);
+  }, [user, isLoading, navigate, toast, note]);
 
   if (isLoading) {
     return (
