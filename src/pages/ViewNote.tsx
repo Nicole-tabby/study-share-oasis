@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -52,6 +51,8 @@ const ViewNote = () => {
           return;
         }
         
+        console.log('Attempting to get signed URL for:', note.file_url);
+        
         // Get a signed URL from storage for the file
         const { data, error } = await supabase.storage
           .from('notes')
@@ -59,9 +60,21 @@ const ViewNote = () => {
           
         if (error) {
           console.error('Error creating signed URL:', error);
+          
+          // Try alternative approach - download URL
+          const downloadData = await supabase.storage
+            .from('notes')
+            .getPublicUrl(note.file_url);
+            
+          if (downloadData.data?.publicUrl) {
+            console.log("Successfully created public URL:", downloadData.data.publicUrl);
+            setDownloadUrl(downloadData.data.publicUrl);
+            return;
+          }
+          
           toast({
             title: "Error accessing file",
-            description: "There was a problem accessing this note: " + error.message,
+            description: "There was a problem accessing this note. The file may not exist or may have been moved.",
             variant: "destructive"
           });
           return;
@@ -75,7 +88,7 @@ const ViewNote = () => {
         console.error('Error processing download URL:', err);
         toast({
           title: "Error accessing file",
-          description: "There was a problem accessing this note.",
+          description: "There was a problem accessing this note. Please try again later.",
           variant: "destructive"
         });
       }
@@ -90,10 +103,19 @@ const ViewNote = () => {
     if (!note) return;
     
     try {
-      // Increment the download counter
-      await incrementDownload.mutateAsync(note.id);
+      // Try to get the latest download URL if we don't have one
+      if (!downloadUrl && note.file_url) {
+        // Try public URL first
+        const { data } = await supabase.storage
+          .from('notes')
+          .getPublicUrl(note.file_url);
+          
+        if (data?.publicUrl) {
+          setDownloadUrl(data.publicUrl);
+        }
+      }
       
-      // Ensure we have a valid download URL
+      // If we still don't have a download URL, show an error
       if (!downloadUrl) {
         toast({
           title: "Download failed",
@@ -102,6 +124,9 @@ const ViewNote = () => {
         });
         return;
       }
+      
+      // Increment the download counter
+      await incrementDownload.mutateAsync(note.id);
       
       toast({
         title: "Download started",
@@ -296,7 +321,7 @@ const ViewNote = () => {
                 <Button 
                   onClick={handleDownload} 
                   className="mt-auto bg-studyhub-500 hover:bg-studyhub-600"
-                  disabled={incrementDownload.isPending || !downloadUrl}
+                  disabled={incrementDownload.isPending}
                 >
                   {incrementDownload.isPending ? (
                     <>

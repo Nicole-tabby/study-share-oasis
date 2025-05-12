@@ -103,6 +103,8 @@ export const useNotes = () => {
       queryFn: async () => {
         if (!noteId) throw new Error('Note ID is required');
         
+        console.log("Fetching note with ID:", noteId);
+        
         // Get the note first with profile information
         const { data: noteData, error: noteError } = await supabase
           .from('notes')
@@ -128,7 +130,29 @@ export const useNotes = () => {
         }
 
         if (!noteData) {
+          console.error("Note not found with ID:", noteId);
           throw new Error('Note not found');
+        }
+        
+        console.log("Note data fetched successfully:", noteData);
+        
+        // Check if we need to create a public URL for the file
+        if (noteData.file_url && !noteData.file_url.startsWith('http')) {
+          try {
+            console.log("Generating public URL for file:", noteData.file_url);
+            // Try to get a public URL for the file
+            const { data: publicUrlData } = await supabase.storage
+              .from('notes')
+              .getPublicUrl(noteData.file_url);
+              
+            if (publicUrlData?.publicUrl) {
+              console.log("Public URL generated:", publicUrlData.publicUrl);
+              noteData.file_url = publicUrlData.publicUrl;
+            }
+          } catch (urlError) {
+            console.error("Error generating public URL:", urlError);
+            // Don't fail if we can't get a public URL, we'll try again when needed
+          }
         }
         
         // Increment view counter
@@ -137,6 +161,8 @@ export const useNotes = () => {
             .from('notes')
             .update({ views: (noteData.views || 0) + 1 })
             .eq('id', noteId);
+            
+          console.log("View count incremented for note ID:", noteId);
         } catch (updateError) {
           console.error("Error updating view count:", updateError);
           // Don't throw error here, as we still want to return the note data
@@ -251,6 +277,8 @@ export const useNotes = () => {
     return useMutation({
       mutationFn: async (noteId: string) => {
         try {
+          console.log("Incrementing download count for note ID:", noteId);
+          
           // First, get the current count
           const { data: note, error: fetchError } = await supabase
             .from('notes')
@@ -276,6 +304,7 @@ export const useNotes = () => {
             throw updateError;
           }
 
+          console.log("Download count successfully incremented");
           return data;
         } catch (error) {
           console.error("Error in increment download mutation:", error);
