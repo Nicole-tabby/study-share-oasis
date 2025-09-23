@@ -8,77 +8,10 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// Create a custom type that extends Database with our saved_notes table
-type CustomDatabase = Database & {
-  public: {
-    Tables: {
-      saved_notes: {
-        Row: SavedNote;
-        Insert: {
-          id?: string;
-          user_id: string;
-          note_id: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          note_id?: string;
-          created_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "saved_notes_note_id_fkey";
-            columns: ["note_id"];
-            referencedRelation: "notes";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "saved_notes_user_id_fkey";
-            columns: ["user_id"];
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
-      // ... other tables would be inherited from Database type
-    };
-  };
-  storage: {
-    Buckets: {
-      avatars: {
-        Row: {
-          id: string;
-          name: string;
-          owner: string | null;
-          created_at: string;
-          updated_at: string;
-          public: boolean;
-        };
-      };
-    };
-  };
-};
-
-// Create the client with our extended type
-export const supabase = createClient<CustomDatabase>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-
-// Helper types for database tables not in auto-generated types
-export interface SavedNote {
-  id: string;
-  user_id: string;
-  note_id: string;
-  created_at: string;
-}
-
-export interface ExtendedProfileData {
-  id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  bio: string | null;
-  university: string | null;
-  course: string | null;
-  year: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    storage: localStorage,
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});
