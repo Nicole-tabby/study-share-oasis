@@ -1,6 +1,13 @@
-
-import { supabase, SavedNote } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { Note } from '@/hooks/useNotes';
+
+// Define the SavedNote type based on the database schema
+export interface SavedNote {
+  id: string;
+  user_id: string;
+  note_id: string;
+  created_at: string;
+}
 
 // Define the SavedNoteWithData interface that includes the actual note data
 export interface SavedNoteWithData extends SavedNote {
