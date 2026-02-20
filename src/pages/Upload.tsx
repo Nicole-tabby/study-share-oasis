@@ -80,9 +80,34 @@ const Upload = () => {
     });
   };
   
+  const ALLOWED_TYPES = [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'text/plain',
+    'text/markdown',
+  ];
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Validate file type
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        setErrors(prev => ({ ...prev, file: 'Invalid file type. Allowed: PDF, DOC, DOCX, PPT, PPTX, TXT, MD' }));
+        e.target.value = '';
+        return;
+      }
+
+      // Validate file size
+      if (file.size > MAX_FILE_SIZE) {
+        setErrors(prev => ({ ...prev, file: 'File is too large. Maximum size is 10MB.' }));
+        e.target.value = '';
+        return;
+      }
+
       setSelectedFile(file);
       
       // Clear file error
