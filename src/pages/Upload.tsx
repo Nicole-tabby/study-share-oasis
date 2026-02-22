@@ -14,6 +14,14 @@ import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotes } from '@/hooks/useNotes';
 import { supabase } from '@/integrations/supabase/client';
+import { z } from 'zod';
+
+const NoteFormSchema = z.object({
+  title: z.string().trim().min(1, 'Title is required').max(200, 'Title must be under 200 characters'),
+  course: z.string().trim().min(1, 'Course is required').max(100, 'Course must be under 100 characters'),
+  semester: z.string().trim().min(1, 'Semester is required').max(50, 'Semester must be under 50 characters'),
+  description: z.string().max(2000, 'Description must be under 2000 characters').optional(),
+});
 
 const Upload = () => {
   const navigate = useNavigate();
@@ -37,16 +45,19 @@ const Upload = () => {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     
-    if (!formData.title.trim()) {
-      newErrors.title = 'Title is required';
-    }
-    
-    if (!formData.course.trim()) {
-      newErrors.course = 'Course is required';
-    }
-    
-    if (!formData.semester.trim()) {
-      newErrors.semester = 'Semester is required';
+    // Validate with zod schema
+    const result = NoteFormSchema.safeParse({
+      title: formData.title,
+      course: formData.course,
+      semester: formData.semester,
+      description: formData.description || undefined,
+    });
+
+    if (!result.success) {
+      result.error.errors.forEach((err) => {
+        const field = err.path[0] as string;
+        newErrors[field] = err.message;
+      });
     }
     
     if (!selectedFile) {
