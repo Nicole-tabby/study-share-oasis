@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,19 +12,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotes } from '@/hooks/useNotes';
+import { useSavedNotes } from '@/hooks/useSavedNotes';
 
 const Browse = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSemester, setSelectedSemester] = useState<string>('all');
   const [selectedCourse, setSelectedCourse] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest' | 'popular'>('newest');
-  const [savedNotes, setSavedNotes] = useState<string[]>([]);
   
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
   const { usePublicNotes } = useNotes();
   const { data: notes = [], isLoading, error } = usePublicNotes();
+  
+  const { useGetSavedNotes, useSaveNote, useUnsaveNote } = useSavedNotes();
+  const { data: savedNotesData } = useGetSavedNotes(user?.id);
+  const saveNoteMutation = useSaveNote();
+  const unsaveNoteMutation = useUnsaveNote();
+  const savedNoteIds = useMemo(() => savedNotesData?.map((sn: any) => sn.note_id) || [], [savedNotesData]);
 
   // Extract unique semesters and courses for filter dropdowns
   const { semesters, courses } = useMemo(() => {
@@ -79,19 +85,6 @@ const Browse = () => {
     });
   }, [notes, searchQuery, selectedSemester, selectedCourse, sortOrder]);
 
-  // Load saved notes from localStorage
-  useEffect(() => {
-    const savedIds = localStorage.getItem('savedNotesIds');
-    if (savedIds) {
-      try {
-        setSavedNotes(JSON.parse(savedIds));
-      } catch (error) {
-        console.error("Error parsing saved note IDs:", error);
-        setSavedNotes([]);
-      }
-    }
-  }, []);
-  
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedSemester('all');
@@ -101,19 +94,19 @@ const Browse = () => {
 
   const hasActiveFilters = searchQuery || selectedSemester !== 'all' || selectedCourse !== 'all';
   
-  const toggleSaveNote = (noteId: string) => {
-    let updatedSavedIds: string[];
-    
-    if (savedNotes.includes(noteId)) {
-      updatedSavedIds = savedNotes.filter(id => id !== noteId);
-      toast({ title: "Note removed from saved" });
-    } else {
-      updatedSavedIds = [...savedNotes, noteId];
-      toast({ title: "Note saved successfully" });
+  const toggleSaveNote = async (noteId: string) => {
+    if (!user) {
+      toast({ title: "Login required", description: "Please login to save notes", variant: "destructive" });
+      return;
     }
     
-    setSavedNotes(updatedSavedIds);
-    localStorage.setItem('savedNotesIds', JSON.stringify(updatedSavedIds));
+    const isSaved = savedNoteIds.includes(noteId);
+    
+    if (isSaved) {
+      unsaveNoteMutation.mutate({ userId: user.id, noteId });
+    } else {
+      saveNoteMutation.mutate({ userId: user.id, noteId });
+    }
   };
   
   const handleViewNote = (noteId: string) => {
@@ -328,7 +321,7 @@ const Browse = () => {
                             className="h-8 w-8"
                             onClick={() => toggleSaveNote(note.id)}
                           >
-                            {savedNotes.includes(note.id) ? (
+                            {savedNoteIds.includes(note.id) ? (
                               <BookmarkCheck className="h-4 w-4 text-studyhub-500" />
                             ) : (
                               <Bookmark className="h-4 w-4" />

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
+import { ProfileSchema } from '@/lib/validationSchemas';
 
 export type ProfileData = {
   id: string;
@@ -61,6 +62,18 @@ export const useProfile = () => {
       mutationFn: async (profileData: Partial<ProfileData> & { id: string }) => {
         const { id, ...updateData } = profileData;
         
+        // Validate profile data
+        const validation = ProfileSchema.safeParse(updateData);
+        if (!validation.success) {
+          const firstError = validation.error.errors[0]?.message || 'Invalid profile data';
+          toast({
+            title: 'Validation error',
+            description: firstError,
+            variant: 'destructive',
+          });
+          throw new Error(firstError);
+        }
+
         try {
           const { data, error } = await supabase
             .from('profiles')
