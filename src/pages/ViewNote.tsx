@@ -59,19 +59,6 @@ const ViewNote = () => {
           .createSignedUrl(note.file_url, 60 * 60); // 1 hour expiry
           
         if (error) {
-          console.error('Error creating signed URL:', error);
-          
-          // Try alternative approach - download URL
-          const downloadData = await supabase.storage
-            .from('notes')
-            .getPublicUrl(note.file_url);
-            
-          if (downloadData.data?.publicUrl) {
-            console.log("Successfully created public URL:", downloadData.data.publicUrl);
-            setDownloadUrl(downloadData.data.publicUrl);
-            return;
-          }
-          
           toast({
             title: "Error accessing file",
             description: "There was a problem accessing this note. The file may not exist or may have been moved.",
@@ -103,15 +90,14 @@ const ViewNote = () => {
     if (!note) return;
     
     try {
-      // Try to get the latest download URL if we don't have one
-      if (!downloadUrl && note.file_url) {
-        // Try public URL first
+      // Try to get the latest signed URL if we don't have one
+      if (!downloadUrl && note.file_url && !note.file_url.startsWith('http')) {
         const { data } = await supabase.storage
           .from('notes')
-          .getPublicUrl(note.file_url);
-          
-        if (data?.publicUrl) {
-          setDownloadUrl(data.publicUrl);
+          .createSignedUrl(note.file_url, 60 * 60);
+
+        if (data?.signedUrl) {
+          setDownloadUrl(data.signedUrl);
         }
       }
       
