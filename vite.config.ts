@@ -19,4 +19,10 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  esbuild: {
+    // Strip console.* and debugger statements in production builds to avoid
+    // leaking internal implementation details (note IDs, file paths, errors)
+    // to end users via the browser console.
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
+  },
 }));

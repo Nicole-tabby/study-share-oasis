@@ -103,8 +103,6 @@ export const useNotes = () => {
       queryFn: async () => {
         if (!noteId) throw new Error('Note ID is required');
         
-        console.log("Fetching note with ID:", noteId);
-        
         // Get the note first with profile information
         const { data: noteData, error: noteError } = await supabase
           .from('notes')
@@ -120,7 +118,6 @@ export const useNotes = () => {
           .maybeSingle();
 
         if (noteError) {
-          console.error("Error fetching note:", noteError);
           toast({
             title: 'Error fetching note',
             description: noteError.message,
@@ -130,12 +127,9 @@ export const useNotes = () => {
         }
 
         if (!noteData) {
-          console.error("Note not found with ID:", noteId);
           throw new Error('Note not found');
         }
-        
-        console.log("Note data fetched successfully:", noteData);
-        
+
         // Generate a short-lived signed URL for private storage access
         if (noteData.file_url && !noteData.file_url.startsWith('http')) {
           try {
@@ -151,17 +145,11 @@ export const useNotes = () => {
           }
         }
         
-        // Increment view counter
+        // Atomically increment view counter (avoids read-modify-write race)
         try {
-          await supabase
-            .from('notes')
-            .update({ views: (noteData.views || 0) + 1 })
-            .eq('id', noteId);
-            
-          console.log("View count incremented for note ID:", noteId);
-        } catch (updateError) {
-          console.error("Error updating view count:", updateError);
-          // Don't throw error here, as we still want to return the note data
+          await supabase.rpc('increment_note_views', { note_id: noteId });
+        } catch {
+          // Don't throw — we still want to return the note data
         }
 
         return noteData;
@@ -268,44 +256,13 @@ export const useNotes = () => {
     });
   };
 
-  // Increment download counter
+  // Atomically increment download counter (no race condition)
   const useIncrementDownload = () => {
     return useMutation({
       mutationFn: async (noteId: string) => {
-        try {
-          console.log("Incrementing download count for note ID:", noteId);
-          
-          // First, get the current count
-          const { data: note, error: fetchError } = await supabase
-            .from('notes')
-            .select('downloads')
-            .eq('id', noteId)
-            .single();
-
-          if (fetchError) {
-            console.error("Error fetching download count:", fetchError);
-            throw fetchError;
-          }
-
-          // Then increment it
-          const { data, error: updateError } = await supabase
-            .from('notes')
-            .update({ downloads: (note?.downloads || 0) + 1 })
-            .eq('id', noteId)
-            .select()
-            .single();
-
-          if (updateError) {
-            console.error("Error updating download count:", updateError);
-            throw updateError;
-          }
-
-          console.log("Download count successfully incremented");
-          return data;
-        } catch (error) {
-          console.error("Error in increment download mutation:", error);
-          throw error;
-        }
+        const { error } = await supabase.rpc('increment_note_downloads', { note_id: noteId });
+        if (error) throw error;
+        return true;
       },
       onSuccess: (_, variables) => {
         queryClient.invalidateQueries({ queryKey: ['note', variables] });

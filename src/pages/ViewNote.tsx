@@ -51,8 +51,6 @@ const ViewNote = () => {
           return;
         }
         
-        console.log('Attempting to get signed URL for:', note.file_url);
-        
         // Get a signed URL from storage for the file
         const { data, error } = await supabase.storage
           .from('notes')
@@ -68,11 +66,9 @@ const ViewNote = () => {
         }
         
         if (data?.signedUrl) {
-          console.log("Successfully created signed URL:", data.signedUrl);
           setDownloadUrl(data.signedUrl);
         }
-      } catch (err) {
-        console.error('Error processing download URL:', err);
+      } catch {
         toast({
           title: "Error accessing file",
           description: "There was a problem accessing this note. Please try again later.",
@@ -134,8 +130,7 @@ const ViewNote = () => {
           description: `${note.file_name} has been downloaded successfully.`
         });
       }, 1500);
-    } catch (error) {
-      console.error("Download error:", error);
+    } catch {
       toast({
         title: "Download failed",
         description: "Unable to download the file. Please try again later.",
@@ -150,8 +145,8 @@ const ViewNote = () => {
     try {
       await deleteNote.mutateAsync(note.id);
       navigate('/browse', { replace: true });
-    } catch (error) {
-      console.error("Error deleting note:", error);
+    } catch {
+      // error already surfaced via toast in the mutation
     } finally {
       setIsDeleteDialogOpen(false);
     }

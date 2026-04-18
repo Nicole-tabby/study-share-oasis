@@ -45,7 +45,6 @@ const Login = () => {
       const { error } = await signIn(email, password);
       
       if (error) {
-        console.error("Login error:", error);
         let friendlyMessage = "Invalid email or password. Please try again.";
         
         // Parse specific error messages
