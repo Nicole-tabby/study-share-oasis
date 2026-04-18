@@ -136,22 +136,18 @@ export const useNotes = () => {
         
         console.log("Note data fetched successfully:", noteData);
         
-        // Check if we need to create a public URL for the file
+        // Generate a short-lived signed URL for private storage access
         if (noteData.file_url && !noteData.file_url.startsWith('http')) {
           try {
-            console.log("Generating public URL for file:", noteData.file_url);
-            // Try to get a public URL for the file
-            const { data: publicUrlData } = await supabase.storage
+            const { data: signedData } = await supabase.storage
               .from('notes')
-              .getPublicUrl(noteData.file_url);
-              
-            if (publicUrlData?.publicUrl) {
-              console.log("Public URL generated:", publicUrlData.publicUrl);
-              noteData.file_url = publicUrlData.publicUrl;
+              .createSignedUrl(noteData.file_url, 60 * 60); // 1 hour expiry
+
+            if (signedData?.signedUrl) {
+              noteData.file_url = signedData.signedUrl;
             }
           } catch (urlError) {
-            console.error("Error generating public URL:", urlError);
-            // Don't fail if we can't get a public URL, we'll try again when needed
+            // Silently fail; the consumer will handle missing URL
           }
         }
         
