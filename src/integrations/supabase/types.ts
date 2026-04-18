@@ -140,7 +140,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_note_downloads: {
+        Args: { note_id: string }
+        Returns: undefined
+      }
+      increment_note_views: { Args: { note_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
