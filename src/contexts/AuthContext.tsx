@@ -68,13 +68,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
-      } else {
+      if (!error) {
         setProfile(data);
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
+    } catch {
+      // Silently ignore — profile fetch failures should not leak details to console
     } finally {
       setLoading(false);
     }
